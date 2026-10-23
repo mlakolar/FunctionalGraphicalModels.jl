@@ -126,3 +126,13 @@ estimating their cost and respecting the task's approved compute allowance.
 These are evidence gaps, not claims about statistical inconsistency of the
 implemented estimators. Current solver checks and smoke results are separate
 from a successful published-table replication.
+
+An optional scientific plotting helper uses matplotlib without adding Julia
+package dependencies. Run it inside a compute allocation with Python 3.11+:
+
+```sh
+python3 experiments/plot_qiao.py results/qiao-comparison/metrics.csv results/qiao-roc
+```
+
+It exports PNG/SVG figures from the observed fitted points, labels the selected
+realization and valid-fit counts, and adds no artificial path endpoints.
