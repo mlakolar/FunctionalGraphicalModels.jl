@@ -27,6 +27,8 @@
     @test functional_glasso(C,[2,2],0).precision ≈ inv(C) atol=4e-6
     @test_throws ArgumentError functional_glasso(S,[1],0.1)
     @test_throws ArgumentError functional_glasso(S,1,-1)
+    @test_throws ArgumentError functional_glasso([1.0 1+1e-11;1+1e-11 1],1,1e-12)
+    @test_throws ArgumentError functional_glasso(1e200 .* S,1,0.1)
     @test_throws ArgumentError functional_glasso([1.0 2;2 1],1,0.1)
     @test_throws ArgumentError functional_glasso(ones(2,2),[2],0.1)
     @test_throws ArgumentError functional_glasso(S,1,0.1;threshold=-1)

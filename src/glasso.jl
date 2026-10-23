@@ -81,7 +81,8 @@ function functional_glasso(S::AbstractMatrix{<:Real}, block_sizes, lambda::Real;
                            rho::Real=1, maxiter::Integer=10000,
                            abstol::Real=1e-7, reltol::Real=1e-6,
                            threshold::Real=1e-6)
-    d = checksquare(S)
+    Base.require_one_based_indexing(S)
+    d = LinearAlgebra.checksquare(S)
     d > 0 || throw(ArgumentError("covariance cannot be empty"))
     all(isfinite, S) && isapprox(S, transpose(S); atol=1e-12, rtol=1e-10) ||
         throw(ArgumentError("covariance must be finite and symmetric"))
@@ -91,13 +92,25 @@ function functional_glasso(S::AbstractMatrix{<:Real}, block_sizes, lambda::Real;
     all(x -> isfinite(x) && x > 0, (abstol, reltol)) || throw(ArgumentError("tolerances must be positive"))
     bs, blocks = _fgm_blocks(d, block_sizes)
     C = Matrix{Float64}(Symmetric(S))
-    eigmin(Symmetric(C)) >= -1e-10 * max(1, opnorm(C)) || throw(ArgumentError("covariance must be positive semidefinite"))
+    mineigen = eigmin(Symmetric(C))
+    mineigen >= -1e-10 * max(1, opnorm(C)) || throw(ArgumentError("covariance must be positive semidefinite"))
     for b in blocks
         isposdef(Symmetric(C[b,b])) || throw(ArgumentError("each diagonal covariance block must be positive definite; reduce truncation"))
     end
     lambda == 0 && !isposdef(Symmetric(C)) && throw(ArgumentError("lambda=0 requires positive-definite covariance"))
+    if mineigen < 0 && lambda > 0
+        # A feasible dual covariance lies on the segment from C to its block
+        # diagonal. Its minimum eigenvalue has this concavity lower bound.
+        offmax = maximum((norm(C[a,b]) for a in blocks for b in blocks if a != b); init=0.0)
+        fraction = offmax == 0 ? 1.0 : min(1.0, lambda/offmax)
+        mindiag = minimum(eigmin(Symmetric(C[b,b])) for b in blocks)
+        (1-fraction)*mineigen + fraction*mindiag > 0 ||
+            throw(ArgumentError("covariance is numerically indefinite at this penalty; rescale or increase lambda"))
+    end
     scale = tr(C) / d
     r = Float64(rho) * scale^2
+    isfinite(scale) && scale > 0 && isfinite(r) && r > 0 && isfinite(inv(r)) ||
+        throw(ArgumentError("covariance scale and rho exceed Float64 range; rescale the covariance"))
     X = Matrix{Float64}(I, d, d) / scale
     Z = copy(X)
     U = zeros(d,d)

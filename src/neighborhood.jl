@@ -47,6 +47,7 @@ function _neighborhood_parameters(value, p, name)
 end
 
 function _neighborhood_validate_scores(scores)
+    Base.require_one_based_indexing(scores)
     ndims(scores) == 3 || throw(DimensionMismatch("scores must have dimensions n × p × M"))
     n, p, m = size(scores)
     n >= 2 || throw(ArgumentError("at least two observations are required"))
@@ -109,12 +110,17 @@ function _neighborhood_group_lasso(X, Y, m, lambda;
     maxiter isa Integer && maxiter > 0 || throw(ArgumentError("maxiter must be positive"))
     isfinite(atol) && atol > 0 || throw(ArgumentError("atol must be finite and positive"))
     isfinite(rtol) && rtol >= 0 || throw(ArgumentError("rtol must be finite and nonnegative"))
-    isfinite(rho) && rho > 0 || throw(ArgumentError("rho must be finite and positive"))
+    rho = Float64(rho)
+    isfinite(rho) && rho > 0 || throw(ArgumentError("rho must be finite and positive in Float64"))
+    all(isfinite,X) && all(isfinite,Y) ||
+        throw(ArgumentError("centered scores overflow Float64; rescale the supplied scores"))
     n, q = size(X)
     groups = _neighborhood_groups(m, div(q,m))
     penalty = ProximalBase.GroupNormL2(lambda, groups, ones(length(groups)))
     gram = transpose(X) * X / n
     cross = transpose(X) * Y / n
+    all(isfinite,gram) && all(isfinite,cross) ||
+        throw(ArgumentError("score cross-products overflow Float64; rescale the supplied scores"))
     scale = maximum(group -> norm(view(cross, group)), groups)
     tolerance = atol + rtol * max(scale, lambda)
     B = zeros(q, m)
@@ -123,8 +129,9 @@ function _neighborhood_group_lasso(X, Y, m, lambda;
                                             0.0, 0.0, 0.0)
         return B, diagnostic
     end
-    rho = Float64(rho)
-    factor = cholesky(Symmetric(gram + rho*I))
+    system = gram + rho*I
+    all(isfinite,system) || throw(ArgumentError("rho plus score curvature overflows Float64"))
+    factor = cholesky(Symmetric(system))
     smooth = copy(B)
     dual = copy(B)
     previous = copy(B)
@@ -141,6 +148,8 @@ function _neighborhood_group_lasso(X, Y, m, lambda;
         @. tmp = smooth + dual
         ProximalBase.prox!(B, penalty, tmp, inv(rho))
         @. dual += smooth - B
+        all(isfinite,B) && all(isfinite,dual) ||
+            error("neighborhood iterations overflowed Float64; rescale the supplied scores")
         primal_residual = norm(smooth-B)
         dual_residual = rho * norm(B-previous)
         mul!(gradient, gram, B)
@@ -292,19 +301,15 @@ function _neighborhood_scv_rss(X, Y, selected_columns, fold_ids)
         train = findall(!=(fold),fold_ids)
         test = findall(==(fold),fold_ids)
         Ytrain = Y[train,:]
-        ymean = sum(Ytrain; dims=1)/length(train)
-        Ytest = Y[test,:] .- ymean
+        Ytest = Y[test,:]
         if isempty(selected_columns)
             criterion += sum(abs2,Ytest)
         else
             Xtrain = X[train,selected_columns]
-            xmean = sum(Xtrain; dims=1)/length(train)
-            Xtrain .-= xmean
-            Ytrain .-= ymean
             # A rank-deficient selected model has multiple minimizers; pinv
             # chooses the minimum-norm unpenalized least-squares refit in (18).
             refit = pinv(Xtrain)*Ytrain
-            criterion += sum(abs2,Ytest-(X[test,selected_columns].-xmean)*refit)
+            criterion += sum(abs2,Ytest-X[test,selected_columns]*refit)
         end
         # Count selected NODE groups, not scalar coefficients (equation 19).
         criterion += log(length(test)) * length(selected_columns)/size(Y,2)
@@ -388,7 +393,8 @@ unpenalized least squares on each fold's training observations with the support
 held fixed. Average `RSS + log(n_test)*number_of_selected_nodes` across folds
 (equations 18–19). This intentionally uses full-data support selection, as in
 the paper; it is a model-selection criterion, not an independent estimate of
-out-of-sample risk.
+out-of-sample risk. Scores are centered once on the full data when `center=true`;
+the fold refits omit intercepts, as specified in equation (18).
 
 `fold_ids` specifies a reproducible partition. By default observations are
 assigned cyclically to `folds` folds without consuming random numbers. Ties

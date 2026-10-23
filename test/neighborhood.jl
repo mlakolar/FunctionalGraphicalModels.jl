@@ -53,6 +53,9 @@ using Random
     @test_throws ArgumentError functional_neighborhood(scores,lambda; rho=0)
     @test_throws DimensionMismatch functional_neighborhood(scores,[0.1,0.2])
     @test_throws ArgumentError functional_neighborhood(fill(NaN,2,2,1),0.1)
+    enormous = reshape([-1e200,1e200,1e200,-1e200],2,2,1)
+    @test_throws ArgumentError functional_neighborhood(enormous,0.1)
+    @test_throws ArgumentError functional_neighborhood(scores,lambda; rho=big"1e1000")
 end
 
 @testset "Target-specific FPCA projection for EJS" begin
@@ -94,11 +97,10 @@ end
     @test all(d -> d.converged,selected.fit.diagnostics)
     @test selected.fold_ids == mod1.(1:30,3)
     # Full thresholding removes every source. SCV then reduces to the mean
-    # held-out RSS from training-fold intercepts, with zero complexity penalty.
+    # held-out RSS from the zero predictor, with zero complexity penalty.
     mu = sum(scores; dims=1)/30
     Y = reshape(scores[:,1,1].-mu[1,1,1],:,1)
-    null_rss = sum(sum(abs2,Y[findall(==(f),selected.fold_ids),:].-
-        sum(Y[findall(!=(f),selected.fold_ids),:];dims=1)/20) for f in 1:3)/3
+    null_rss = sum(sum(abs2,Y[findall(==(f),selected.fold_ids),:]) for f in 1:3)/3
     @test selected.criteria[1,2,1] ≈ null_rss
     @test_throws ArgumentError select_neighborhood_scv(scores,Float64[],[0.0])
     @test_throws ArgumentError select_neighborhood_scv(scores,[0.1],[0.0]; folds=1)
