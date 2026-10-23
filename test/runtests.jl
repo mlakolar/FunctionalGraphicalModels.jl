@@ -10,5 +10,6 @@ using Aqua
     include("neighborhood.jl")
     include("doubly.jl")
     include("separable.jl")
+    include("simulation.jl")
     Aqua.test_all(FunctionalGraphicalModels)
 end
