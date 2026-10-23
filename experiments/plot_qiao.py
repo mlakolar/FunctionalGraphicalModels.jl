@@ -44,8 +44,6 @@ def main():
     ax.legend(loc="lower right", fontsize=9)
     fig.suptitle(f"Qiao {args.model} pilot: n={settings['n']}, p={settings['p']}, T={settings['ntime']}", fontsize=13)
     ax.set_title(f"One dataset; seed {rows[0]['seed']}; observed fitted points only", fontsize=10, pad=10)
-    fig.text(0.5, 0.005, "Coarse regularization paths. No synthetic endpoints or published-table replication.",
-             ha="center", fontsize=8, color="0.35")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for path in outputs:
         fig.savefig(path, dpi=180, bbox_inches="tight")
