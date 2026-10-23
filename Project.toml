@@ -1,13 +1,15 @@
 name = "FunctionalGraphicalModels"
 uuid = "3301cf8d-315c-4b16-853e-9f6bb31c33f8"
-authors = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
+authors = ["Mladen Kolar <mkolar@usc.edu>"]
 version = "0.1.0"
 
 [deps]
+BSpline = "2820293e-b50d-40cf-97f4-3fb2ab379646"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [compat]
 Aqua = "0.8"
+BSpline = "0.1"
 LinearAlgebra = "1"
 Test = "1"
 julia = "1.10"

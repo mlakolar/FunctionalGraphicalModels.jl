@@ -7,3 +7,7 @@
 .vscode/
 /examples/Manifest*.toml
 /benchmark/Manifest*.toml
+
+# Local development and generated experiment outputs
+.dev/
+results/
