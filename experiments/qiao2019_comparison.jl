@@ -27,6 +27,7 @@ function comparison_usage(io=stdout)
     --seed INT               First dataset seed (default 20261024).
     --out PATH               New output directory (default results/qiao2019-comparison).
     --lambda-min-ratio REAL  Smallest fraction of lambda_max (default 0.01).
+    --fgm-rho REAL           Relative FGM ADMM penalty (default 1; objective unchanged).
     --maxiter INT            ADMM iteration limit per fit (default 10000).
     --threshold REAL         Absolute precision support threshold (default 1e-6).
     --n INT                  Subjects (default 100).
@@ -52,6 +53,8 @@ function comparison_usage(io=stdout)
     reported. Empty/complete reference graphs are saved separately and are
     never inserted as fitted path points. This driver does not reproduce the
     paper's original random-number stream or establish agreement with its table.
+    Coarse path areas are numerical diagnostics and do not establish method
+    rankings; refine the penalty grid and resolve failed fits before comparisons.
     """)
 end
 
@@ -70,11 +73,11 @@ function comparison_options(args)
     any(==("--help"),args) && return nothing
     opts = Dict{String,Any}("replicates"=>1,"nlambda"=>8,"model"=>"ar2",
         "p"=>50,"seed"=>20261024,"out"=>joinpath("results","qiao2019-comparison"),
-        "lambda-min-ratio"=>0.01,"maxiter"=>10000,"threshold"=>1e-6,
+        "lambda-min-ratio"=>0.01,"fgm-rho"=>1.0,"maxiter"=>10000,"threshold"=>1e-6,
         "n"=>100,"ntime"=>100,"folds"=>5,"nbasis-grid"=>collect(5:10),
         "components-grid"=>collect(1:6))
     intkeys = ("replicates","nlambda","p","seed","maxiter","n","ntime","folds")
-    realkeys = ("lambda-min-ratio","threshold")
+    realkeys = ("lambda-min-ratio","fgm-rho","threshold")
     gridkeys = ("nbasis-grid","components-grid")
     i = 1
     while i <= length(args)
@@ -101,6 +104,8 @@ function comparison_options(args)
         throw(ArgumentError("seed must be nonnegative and leave room for replicate/tuning seeds"))
     2 <= opts["folds"] <= opts["ntime"] || throw(ArgumentError("folds must lie between 2 and ntime"))
     0 < opts["lambda-min-ratio"] < 1 || throw(ArgumentError("lambda-min-ratio must lie in (0,1)"))
+    isfinite(opts["fgm-rho"]) && opts["fgm-rho"] > 0 ||
+        throw(ArgumentError("fgm-rho must be finite and positive"))
     isfinite(opts["threshold"]) && opts["threshold"] >= 0 ||
         throw(ArgumentError("threshold must be finite and nonnegative"))
     !isempty(opts["nbasis-grid"]) && all(>=(4),opts["nbasis-grid"]) ||
@@ -298,6 +303,7 @@ function comparison_run(opts,arguments)
     settings["scalar_diagonals"] = "unpenalized"
     settings["scalar_timepoint_lambda"] = "one common lambda for all T timepoints; bound=1.05*max_t,max_j!=k |S_t[j,k]|"
     settings["penalty_grid"] = "common log fractions from 1 to lambda-min-ratio, times each method bound"
+    settings["fgm_rho_units"] = "relative ADMM penalty; solver multiplies rho by squared average covariance variance; changes iterations, not the convex objective"
     settings["ALL"] = "edge selected in every timepoint network"
     settings["NEVER"] = "edge selected in at least one timepoint network"
     settings["HALF"] = "edge selected in strictly more than half of timepoint networks"
@@ -305,6 +311,7 @@ function comparison_run(opts,arguments)
     settings["reference_endpoints"] = "stored separately; never inserted into estimated path or AUC"
     settings["random_diagonal_rule"] = "0.5 * maximum_degree + 0.1; paper leaves diagonal choice unspecified"
     settings["reproduction_status"] = "paper-procedure comparison driver; bounded pilot defaults; no claimed agreement with published results"
+    settings["comparison_limit"] = "coarse path areas do not establish method rankings; penalty-grid refinement and resolution of failed fits are required"
     open(joinpath(out,"settings.toml"),"w") do io
         TOML.print(io,settings; sorted=true)
     end
@@ -360,7 +367,7 @@ function comparison_run(opts,arguments)
                 lambda = fraction*bound
                 try
                     fit = functional_glasso(S,tuning.ncomponents,lambda;
-                        maxiter=opts["maxiter"],threshold=opts["threshold"])
+                        rho=opts["fgm-rho"],maxiter=opts["maxiter"],threshold=opts["threshold"])
                     d = fit.diagnostics
                     pd = isposdef(Symmetric(fit.precision))
                     valid = d.converged && pd

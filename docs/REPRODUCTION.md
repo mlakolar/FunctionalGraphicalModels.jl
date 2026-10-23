@@ -82,7 +82,8 @@ The additional driver implements the five methods in the original Section 5.1:
 
 ```sh
 julia --project experiments/qiao2019_comparison.jl --p 50 --replicates 1 \
-  --nlambda 6 --model ar2 --out results/qiao-comparison
+  --nlambda 21 --model ar2 --fgm-rho 0.05 --maxiter 30000 \
+  --out results/qiao-comparison
 ```
 
 FGM uses joint L/M CV over L=5:10, M=1:6. PCA independently chooses L with
@@ -99,7 +100,10 @@ per-time-point solver diagnostics, metrics and fitted supports. The driver repor
 an area over the observed FPR span. It reports a full fitted-path AUC only if
 converged fitted empty and complete endpoints are both actually observed.
 Reference endpoints remain separate. A single dataset and coarse penalty grid
-cannot establish agreement with a 100-replicate published table.
+cannot establish agreement with a 100-replicate published table. The ADMM
+parameter `--fgm-rho` changes numerical convergence, not the statistical
+objective; difficult small-penalty fits may require a smaller value and a
+larger iteration limit. Every such choice is saved in the run settings.
 
 ## Discovery execution and receipts
 
