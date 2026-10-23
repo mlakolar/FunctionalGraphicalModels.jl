@@ -8,5 +8,7 @@ using Aqua
     include("fpca.jl")
     include("glasso.jl")
     include("neighborhood.jl")
+    include("doubly.jl")
+    include("separable.jl")
     Aqua.test_all(FunctionalGraphicalModels)
 end

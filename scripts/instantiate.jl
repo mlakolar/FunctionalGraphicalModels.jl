@@ -17,5 +17,14 @@ for (name, url) in urls
         push!(specs, Pkg.PackageSpec(; name, url, rev="master"))
     end
 end
-isempty(specs) || Pkg.add(specs)
+# ProximalSolvers must be resolved alongside its unregistered downstream
+# package, but must not become a stale direct dependency of this package.
+project_path = joinpath(root, "Project.toml")
+original_project = read(project_path, String)
+try
+    isempty(specs) || Pkg.add(specs)
+finally
+    write(project_path, original_project)
+end
+Pkg.resolve()
 Pkg.instantiate()
