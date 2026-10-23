@@ -64,7 +64,8 @@ All numerical development runs use USC Discovery and Slurm. The suite tests
 analytic solutions, projection identities, penalty normalization, conditional
 scores, graph metrics and numerical failure handling. See the project-specific
 [sbatch script](scripts/discovery.sbatch), [development plan](docs/DEVELOPMENT_PLAN.md)
-and [reproduction guide](docs/REPRODUCTION.md).
+and [reproduction guide](docs/REPRODUCTION.md). The [validation receipt](docs/VALIDATION.md)
+includes a paper-size AR(2) pilot, its ROC figure and adverse findings.
 
 The implementation includes all four estimator families. Published-table and
 real-data reproduction remain incomplete. Supplied truncation and tuning choices,

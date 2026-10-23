@@ -89,5 +89,7 @@ receipt directory. The numerical source revision of the refined run is
 The coarse run's environment revision label was mistyped at submission. Its
 original settings remain intact. `coarse-source-receipt.toml` records the
 actual staged git-archive source, `5eef1cebd0cbff1d5a13c2f5d1c698a14d64dad1`.
-The refined run's revision label is correct. A later render-only job fixes
+The refined run's revision label is correct. Render-only job **13351334** (2 seconds, 1 CPU, 2 GB) fixed
 figure-margin spacing without changing the fitted results.
+
+![Observed ROC paths from the single AR(2) realization](../validation/2026-10-24/paper-pilot/roc.png)
