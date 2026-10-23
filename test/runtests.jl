@@ -1,5 +1,6 @@
 using FunctionalGraphicalModels
 using LinearAlgebra
+using Random
 using Test
 using Aqua
 

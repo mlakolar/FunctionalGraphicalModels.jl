@@ -43,7 +43,9 @@ function comparison_usage(io=stdout)
     unpenalized in every method. Scalar fits use CovarianceSelection.covsel!.
 
     Output: metrics.csv, solver_diagnostics.csv, edges.csv, cv_losses.csv,
-    auc.csv, reference_endpoints.csv, settings.toml, and failures.log.
+    cv_folds.csv, auc.csv, reference_endpoints.csv, settings.toml, and failures.log.
+    CV losses include invalid-candidate reasons; CV folds save each tuning
+    method's exact timepoint-to-fold assignments.
     Unconverged/invalid fits have withheld graph metrics and cause exit status 1.
     A full fitted AUC is reported only if valid fitted empty and complete
     graphs are both observed. Otherwise only the observed-FPR-span area is
@@ -216,7 +218,13 @@ function comparison_cv_rows(io,tuning,model,replicate,seed,method)
         loss = tuning.losses[a,b]
         comparison_csvrow(io,model,replicate,seed,method,L,M,loss,
             L == tuning.nbasis && M == tuning.ncomponents,
-            isfinite(loss) ? "ok" : "ineligible_or_failed")
+            isfinite(loss) ? "ok" : "ineligible_or_failed",tuning.reasons[a,b])
+    end
+end
+
+function comparison_cv_fold_rows(io,tuning,model,replicate,seed,method)
+    for (time_index,fold) in pairs(tuning.fold_ids)
+        comparison_csvrow(io,model,replicate,seed,method,time_index,fold)
     end
 end
 
@@ -267,7 +275,7 @@ end
 
 function comparison_run(opts,arguments)
     out = opts["out"]
-    names = ("metrics.csv","solver_diagnostics.csv","edges.csv","cv_losses.csv",
+    names = ("metrics.csv","solver_diagnostics.csv","edges.csv","cv_losses.csv","cv_folds.csv",
              "auc.csv","reference_endpoints.csv","settings.toml","failures.log")
     any(name -> ispath(joinpath(out,name)),names) &&
         throw(ArgumentError("output files already exist in $out; use a new --out"))
@@ -303,6 +311,7 @@ function comparison_run(opts,arguments)
     ios = Dict(name=>open(joinpath(out,name),"w") for name in names if name != "settings.toml")
     metrics_io,diagnostics_io,edges_io = ios["metrics.csv"],ios["solver_diagnostics.csv"],ios["edges.csv"]
     cv_io,auc_io,endpoints_io,failures_io = ios["cv_losses.csv"],ios["auc.csv"],ios["reference_endpoints.csv"],ios["failures.log"]
+    folds_io = ios["cv_folds.csv"]
     failed_points = 0
     try
         comparison_csvrow(metrics_io,"model","replicate","seed","method","lambda_index","lambda_fraction",
@@ -312,7 +321,8 @@ function comparison_run(opts,arguments)
             "lambda_fraction","lambda","lambda_max_with_margin","converged","positive_definite",
             "kkt_residual","primal_residual","dual_residual","iterations","status","message")
         comparison_csvrow(edges_io,"model","replicate","seed","method","lambda_index","node1","node2","status")
-        comparison_csvrow(cv_io,"model","replicate","seed","method","nbasis","ncomponents","mean_cv_loss","selected","status")
+        comparison_csvrow(cv_io,"model","replicate","seed","method","nbasis","ncomponents","mean_cv_loss","selected","status","reason")
+        comparison_csvrow(folds_io,"model","replicate","seed","method","time_index","fold")
         comparison_csvrow(auc_io,"model","replicate","seed","method","valid_points","requested_points","fpr_min","fpr_max",
             "fitted_empty_observed","fitted_complete_observed","observed_span_area","full_fitted_auc","status")
         comparison_csvrow(endpoints_io,"model","replicate","seed","graph","status","tp","fp","tn","fn","tpr","fpr")
@@ -339,6 +349,8 @@ function comparison_run(opts,arguments)
                 ncomponents_grid=[1],folds=opts["folds"],rng=MersenneTwister(seed+10_000_000))
             comparison_cv_rows(cv_io,tuning,model,replicate,seed,"fglasso")
             comparison_cv_rows(cv_io,pca_tuning,model,replicate,seed,"PCA")
+            comparison_cv_fold_rows(folds_io,tuning,model,replicate,seed,"fglasso")
+            comparison_cv_fold_rows(folds_io,pca_tuning,model,replicate,seed,"PCA")
             println("model=$model replicate=$replicate CV selected fglasso L=$(tuning.nbasis), M=$(tuning.ncomponents); PCA L=$(pca_tuning.nbasis)")
             flush(stdout)
             points = Dict(method=>NamedTuple[] for method in COMPARISON_METHODS)
