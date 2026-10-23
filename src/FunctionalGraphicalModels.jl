@@ -13,10 +13,11 @@ export DenseFunctionalData, quadrature_weights, score_covariance, smooth_bspline
        NeighborhoodResult, NeighborhoodDiagnostic, NeighborhoodSCVResult,
        SparseFunctionalData, SparseFPCAFit, fit_sparse_fpca, DoublyFunctionalFit, fit_doubly,
        JointGraphicalLassoFit, joint_graphical_lasso, SeparableFit, fit_separable,
-       simulate_qiao2019, graph_metrics
+       simulate_qiao2019, graph_metrics, FGMComponentSelection, select_fgm_components
 
 include("data.jl")
 include("fpca.jl")
+include("tuning.jl")
 include("glasso.jl")
 include("neighborhood.jl")
 include("doubly.jl")

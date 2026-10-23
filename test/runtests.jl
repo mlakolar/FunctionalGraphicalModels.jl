@@ -6,6 +6,7 @@ using Aqua
 @testset "FunctionalGraphicalModels" begin
     include("data.jl")
     include("fpca.jl")
+    include("tuning.jl")
     include("glasso.jl")
     include("neighborhood.jl")
     include("doubly.jl")

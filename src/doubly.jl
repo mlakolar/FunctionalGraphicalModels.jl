@@ -42,6 +42,8 @@ struct SparseFPCAFit
     grid::Vector{Float64}
     covariances::Array{Float64,3}
     noise_variance::Vector{Float64}
+    kernel::Symbol
+    bandwidth::Float64
 end
 
 function _dfgm_weights(grid)
@@ -55,12 +57,18 @@ function _dfgm_weights(grid)
     w
 end
 
-# Gaussian kernel constants cancel in each weighted least-squares fit.
-function _dfgm_local_linear(t, y, weights, u, bandwidth)
+# Kernel normalizing constants cancel in each weighted least-squares fit.
+function _dfgm_kernel(x, kernel)
+    kernel == :gaussian && return exp(-x*x/2)
+    kernel == :epanechnikov && return (abs(x) < 1 ? 1-x*x : 0.0)
+    throw(ArgumentError("kernel must be :gaussian or :epanechnikov"))
+end
+
+function _dfgm_local_linear(t, y, weights, u, bandwidth, kernel=:gaussian)
     s0 = s1 = s2 = r0 = r1 = 0.0
     for a in eachindex(t)
         x = (t[a] - u) / bandwidth
-        k = exp(-x*x/2) * weights[a]
+        k = _dfgm_kernel(x, kernel) * weights[a]
         s0 += k
         s1 += k*x
         s2 += k*x*x
@@ -73,12 +81,13 @@ function _dfgm_local_linear(t, y, weights, u, bandwidth)
     (s2*r0 - s1*r1) / determinant
 end
 
-function _dfgm_local_surface(t, v, y, weights, u0, v0, bandwidth)
+function _dfgm_local_surface(t, v, y, weights, u0, v0, bandwidth, kernel=:gaussian)
     G = zeros(3, 3)
     r = zeros(3)
     for a in eachindex(y)
         x1, x2 = (t[a] - u0)/bandwidth, (v[a] - v0)/bandwidth
-        k = weights[a] * exp(-(x1*x1+x2*x2)/2)
+        k = weights[a] * (kernel == :gaussian ? exp(-(x1*x1+x2*x2)/2) :
+            _dfgm_kernel(x1,kernel)*_dfgm_kernel(x2,kernel))
         G[1, 1] += k
         G[1, 2] += k*x1
         G[1, 3] += k*x2
@@ -96,7 +105,7 @@ function _dfgm_local_surface(t, v, y, weights, u0, v0, bandwidth)
 end
 
 function _dfgm_interpolate(grid, values::AbstractVector, x)
-    # Local-linear extrapolation is needed near boundaries for random schedules.
+    first(grid) <= x <= last(grid) || throw(ArgumentError("interpolation time is outside the evaluation grid"))
     k = clamp(searchsortedlast(grid, x), 1, length(grid)-1)
     a = (x-grid[k]) / (grid[k+1]-grid[k])
     (1-a)*values[k] + a*values[k+1]
@@ -104,7 +113,7 @@ end
 
 """
     fit_sparse_fpca(data::SparseFunctionalData; grid, ncomponents=2,
-                    bandwidth, noise_variance=nothing)
+                    bandwidth, noise_variance=nothing, kernel=:gaussian)
 
 Estimate marginal FPCA for the sparse-observation DFGM procedure. For each
 node, local-linear mean smoothing is followed by a local-linear surface fit
@@ -114,23 +123,36 @@ positive semidefinite cone using trapezoidal quadrature. Conditional scores
 are `Λ Φ' (Φ Λ Φ' + σ² I)⁻¹ (Y-μ)`.
 
 `bandwidth` is an explicit positive bandwidth in the time units of `grid`.
+`kernel=:gaussian` retains observations at all distances. The paper's
+compact-support kernel condition does not hold for this default; its stated
+theorems do not transfer unchanged. `kernel=:epanechnikov` uses a Lipschitz
+kernel supported on `[-1,1]`, matching that kernel condition. Compact support
+can leave a singular local design, which raises an error rather than silently
+changing the bandwidth or fitting a different model.
+
 `noise_variance` may be a nonnegative scalar or one value per node. If omitted,
 the average excess of the smoothed raw diagonal over the covariance diagonal
 on the middle half of the grid is truncated at zero. This explicit noise
 rule is a package default, not an implementation of every fdapace tuning
 choice. No bandwidth cross-validation or rank AIC selection is performed.
 
-Linear interpolation evaluates estimated eigenfunctions between grid points.
+The evaluation grid must cover every observation time. Linear interpolation
+evaluates estimated means and eigenfunctions between grid points; this method
+does not extrapolate observations outside the fitted domain.
 No diagonal ridge is added. A Moore–Penrose inverse handles a singular
 observation covariance when the specified measurement noise is zero.
 """
 function fit_sparse_fpca(data::SparseFunctionalData; grid::AbstractVector,
                          ncomponents::Integer=2, bandwidth::Real,
-                         noise_variance=nothing)
+                         noise_variance=nothing, kernel::Symbol=:gaussian)
+    bandwidth = Float64(bandwidth)
     isfinite(bandwidth) && bandwidth > 0 || throw(ArgumentError("bandwidth must be finite and positive"))
+    kernel in (:gaussian,:epanechnikov) || throw(ArgumentError("kernel must be :gaussian or :epanechnikov"))
     g = collect(Float64, grid)
     w = _dfgm_weights(g)
     n, p = size(data.values)
+    all(t -> first(g) <= first(t) && last(t) <= last(g), data.times) ||
+        throw(ArgumentError("grid must cover every observation time"))
     q = length(g)
     1 <= ncomponents <= q || throw(ArgumentError("ncomponents must lie between one and the grid length"))
     noise = if noise_variance === nothing
@@ -159,7 +181,7 @@ function fit_sparse_fpca(data::SparseFunctionalData; grid::AbstractVector,
             append!(pointweights, fill(1/(n*count), count))
         end
         for t in 1:q
-            means[j, t] = _dfgm_local_linear(times, values, pointweights, g[t], bandwidth)
+            means[j, t] = _dfgm_local_linear(times, values, pointweights, g[t], bandwidth, kernel)
         end
         centered = [data.values[i,j] .- [_dfgm_interpolate(g, @view(means[j,:]), t) for t in data.times[i,j]] for i in 1:n]
         firsttime, secondtime, products, pairweights = Float64[], Float64[], Float64[], Float64[]
@@ -178,7 +200,7 @@ function fit_sparse_fpca(data::SparseFunctionalData; grid::AbstractVector,
         K = zeros(q, q)
         for t in 1:q, s in t:q
             K[t,s] = K[s,t] = _dfgm_local_surface(firsttime, secondtime,
-                products, pairweights, g[t], g[s], bandwidth)
+                products, pairweights, g[t], g[s], bandwidth, kernel)
         end
         decomposition = eigen(Symmetric((rootw * transpose(rootw)) .* K))
         ordering = sortperm(decomposition.values; rev=true)
@@ -200,7 +222,7 @@ function fit_sparse_fpca(data::SparseFunctionalData; grid::AbstractVector,
         if noise_variance === nothing
             interior = max(1, ceil(Int,q/4)):min(q, floor(Int,3q/4))
             diagonal_excess = [_dfgm_local_linear(times, squaredvalues,
-                pointweights, g[t], bandwidth)-covariances[t,t,j] for t in interior]
+                pointweights, g[t], bandwidth, kernel)-covariances[t,t,j] for t in interior]
             noise[j] = max(sum(diagonal_excess)/length(diagonal_excess), 0)
         end
         for i in 1:n
@@ -216,7 +238,7 @@ function fit_sparse_fpca(data::SparseFunctionalData; grid::AbstractVector,
         end
     end
     SparseFPCAFit(scores, eigenfunctions, eigenvalues, means, w, g,
-                   covariances, noise)
+                   covariances, noise, kernel, bandwidth)
 end
 
 """
@@ -288,7 +310,8 @@ end
 
 """
     fit_doubly(data::SparseFunctionalData; lambda, grid, bandwidth,
-               ncomponents=2, noise_variance=nothing, threshold=1e-6)
+               ncomponents=2, noise_variance=nothing, kernel=:gaussian,
+               threshold=1e-6)
 
 Sparse/noisy DFGM using `fit_sparse_fpca` followed by pointwise CLIME. With a
 bounded number of observations per curve, the population target is the
@@ -297,8 +320,10 @@ Qiao et al. (2020). It need not equal the original process's precision.
 """
 function fit_doubly(data::SparseFunctionalData; lambda, grid::AbstractVector,
                     bandwidth::Real, ncomponents::Integer=2,
-                    noise_variance=nothing, threshold::Real=1e-6)
+                    noise_variance=nothing, kernel::Symbol=:gaussian,
+                    threshold::Real=1e-6)
     fpca = fit_sparse_fpca(data; grid=grid, ncomponents=ncomponents,
-                            bandwidth=bandwidth, noise_variance=noise_variance)
+                            bandwidth=bandwidth, noise_variance=noise_variance,
+                            kernel=kernel)
     _fit_doubly(fpca; lambda=lambda, threshold=threshold, method=:sparse_conditional_scores)
 end

@@ -13,7 +13,10 @@
   reconstructed pointwise second moments and exact CLIME. Explicit bandwidth
   and rank; the default noise rule is documented rather than presented as a
   complete fdapace implementation. No leave-one-curve bandwidth CV, AIC rank
-  selection or pointwise BIC tuning is currently supplied. The dense overload
+  selection or pointwise BIC tuning is currently supplied. Gaussian smoothing
+  is the default; `kernel=:epanechnikov` satisfies the paper's compact-support
+  kernel condition. Gaussian smoothing does not inherit that condition. The
+  evaluation grid must cover every observation time. The dense overload
   assumes noise-free or previously smoothed curves.
 - **Partial separability:** pooled marginal eigenbasis, score correlations,
   sparse-group joint graphical lasso and union of component supports. Both
@@ -67,6 +70,37 @@ not the published dynamic-graph or partial-separability simulation. For sparse
 DFGM, comparison with the latent pointwise graph is explicitly descriptive:
 bounded noisy observations change the reconstruction target.
 
+## Qiao cross-validation and original comparisons
+
+`select_fgm_components` now selects L and M using held-out time points. Each
+fold fits B-spline coefficients, means and FPCA from training outcomes only.
+The implementation uses a common randomized partition across curves, full-domain
+spline support and explicitly documented weighted spline least squares.
+Invalid dimensions or rank-deficient candidates are recorded with reasons.
+
+The additional driver implements the five methods in the original Section 5.1:
+
+```sh
+julia --project experiments/qiao2019_comparison.jl --p 50 --replicates 1 \
+  --nlambda 6 --model ar2 --out results/qiao-comparison
+```
+
+FGM uses joint L/M CV over L=5:10, M=1:6. PCA independently chooses L with
+M fixed at one. ALL, NEVER and HALF fit scalar glasso on raw noisy observations
+at every time point, then respectively take the intersection, union and strict
+majority of the estimated supports. Entire diagonals are unpenalized. Penalties
+are swept relative to each method's zero-graph bound; the timepoint methods use
+one common scalar penalty at each path step. This is an implemented comparison
+protocol, not a claim that it reproduces the authors' random-number stream,
+unspecified spline conventions or published averaged ROC curves.
+
+Outputs include candidate CV losses and invalidity reasons, selected dimensions,
+per-time-point solver diagnostics, metrics and fitted supports. The driver reports
+an area over the observed FPR span. It reports a full fitted-path AUC only if
+converged fitted empty and complete endpoints are both actually observed.
+Reference endpoints remain separate. A single dataset and coarse penalty grid
+cannot establish agreement with a 100-replicate published table.
+
 ## Discovery execution and receipts
 
 Use `scripts/discovery.sbatch` as a project-specific starting point. Account,
@@ -80,7 +114,8 @@ estimating their cost and respecting the task's approved compute allowance.
 
 ## Remaining evidence for full reproduction
 
-1. Implement and verify each paper's full tuning protocol and competitors.
+1. Complete EJS/DFGM/partial-separability tuning and competitors. Independently
+   validate the Qiao comparison conventions against author-generated fixtures.
 2. Add the original EJS, dynamic DFGM and partial-separability generating designs.
 3. Compare small numerical fixtures to author implementations where available,
    without copying incompatible licensed code.

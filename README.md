@@ -48,6 +48,10 @@ Data arrays have dimensions `subjects × nodes × grid points`. Score arrays use
 `subjects × nodes × components`. Covariance blocks are ordered by node. FPCA
 uses trapezoidal quadrature and reuses training means for held-out projection.
 
+`select_fgm_components(sim.data; rng=MersenneTwister(24))` selects spline
+dimension and marginal FPCA truncation with held-out-time cross-validation.
+The paper-comparison driver includes FGM, ALL, NEVER, HALF and PCA.
+
 The dense DFGM overload expects noise-free or preprocessed curves. For irregular
 noisy observations, construct `SparseFunctionalData(times, values)` from matrices
 of vectors and call `fit_doubly` with an evaluation grid, bandwidth and component
