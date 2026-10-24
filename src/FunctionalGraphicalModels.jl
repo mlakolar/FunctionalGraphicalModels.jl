@@ -8,6 +8,8 @@ import ProximalBase
 import FunctionalDataAnalysis as FDA
 import FunctionalDataAnalysis: quadrature_weights
 import KernelSmoothing
+import JuMP
+import Clarabel
 
 export quadrature_weights, score_covariance, smooth_bspline,
        functional_glasso, FGLassoResult, FGLassoDiagnostic,
@@ -16,6 +18,8 @@ export quadrature_weights, score_covariance, smooth_bspline,
        DoublyFunctionalFit, fit_doubly,
        JointGraphicalLassoFit, joint_graphical_lasso, SeparableFit, fit_separable,
        simulate_qiao2019, graph_metrics, FGMComponentSelection, select_fgm_components
+export DirectCovariance, DirectPrecisionFit, direct_covariance, fit_direct,
+       bias_aclime, interval_symmetrize, simulate_dfgm2020, dfgm2020_settings
 
 include("data.jl")
 include("tuning.jl")
@@ -24,5 +28,7 @@ include("neighborhood.jl")
 include("doubly.jl")
 include("separable.jl")
 include("simulation.jl")
+include("direct.jl")
+include("dfgm_simulation.jl")
 
 end

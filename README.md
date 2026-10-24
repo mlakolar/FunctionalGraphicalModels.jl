@@ -118,3 +118,12 @@ real-data reproduction remain incomplete. Supplied truncation and tuning choices
 finite ADMM tolerance and functional model assumptions remain explicit. Inspect
 convergence diagnostics before interpreting a graph. Sparse CLIME estimates need
 not be positive definite; DFGM reports that property at each grid point.
+
+## Direct doubly functional precision estimation
+
+`direct_covariance` and `fit_direct` add bias-aware ACLIME, multiscale
+ℓ₂-ACLIME (an ℓ₂ smoothing-bias budget, not ridge), and scaled lasso on a
+projected smoothed covariance. See [methods and simulation protocol](docs/DIRECT_DFGM.md)
+for assumptions, diagnostics, all twelve Biometrika settings, controlled stress
+experiments, and Discovery commands. Paper-table replication remains distinct
+from numerical validation and pilot coverage.
