@@ -1,0 +1,6 @@
+"model","replicate","seed","method","valid_points","requested_points","fpr_min","fpr_max","fitted_empty_observed","fitted_complete_observed","observed_span_area","full_fitted_auc","status"
+"ar2","1","20261024","fglasso","5","6","0.0","1.0","true","true","0.6484974775169994","NaN","incomplete_or_failed_path"
+"ar2","1","20261024","ALL","6","6","0.0","0.0017730496453900709","true","false","0.0010875923082547343","NaN","observed_span_only"
+"ar2","1","20261024","NEVER","6","6","0.0","1.0","true","true","0.8704074358411932","0.8704074358411932","fitted_endpoints_observed"
+"ar2","1","20261024","HALF","6","6","0.0","1.0","true","true","0.9291145719090443","0.9291145719090443","fitted_endpoints_observed"
+"ar2","1","20261024","PCA","6","6","0.0","0.9476950354609929","true","false","0.612940520581999","NaN","observed_span_only"

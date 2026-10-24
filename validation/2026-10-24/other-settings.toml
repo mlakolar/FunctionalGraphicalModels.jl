@@ -1,0 +1,17 @@
+components = 2
+dense_clime_positive_definite_count = 13
+dfgm_sparse_target = "conditional-score reconstructed process, not generally latent pointwise precision"
+grid_points = 13
+julia_version = "1.13.2"
+lambda = 0.1
+n = 80
+p = 4
+ps_converged = true
+ps_dual = 6.595545197389946e-6
+ps_primal = 9.444761577264097e-9
+seed = 20261024
+source_revision = "49c6b8dabf61ce1a9a28a654c8426fc8ea566456"
+sparse_bandwidth = 0.25
+sparse_clime_positive_definite_count = 13
+sparse_noise_variance = 0.01
+status = "integration_smoke_not_published_design"

@@ -1,0 +1,5 @@
+source_revision = "5eef1cebd0cbff1d5a13c2f5d1c698a14d64dad1"
+source_archive = "comparison-fix.tar.gz"
+job_id = "13351067"
+submitted_environment_label = "6e76796"
+provenance_note = "The environment revision label was mistyped at submission. This receipt records the actual git archive source. Original settings and logs are preserved."

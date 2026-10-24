@@ -1,0 +1,8 @@
+# generated_by=validation/m4_noise.jl; script_sha256=dab7d2420ede262e86570362f78e67f6fd621fa95b0cd4adc3dba973a5256280
+# Julia=1.10.12; base_commit=6f0eac3d5cbe0fad93e88dcad28f389d89b61495; current_HEAD=f1860c951336be5550b90cf56f7c468bcf0ac682; current_source_sha256=dd8427bda55d4bc1c3824798526f65024b2d6598a23367f40bf92e6debd5e7db
+# FunctionalDataAnalysis version=0.1.0; git_revision=main; git_source=https://github.com/mlakolar/FunctionalDataAnalysis.jl; tree_hash=f3e6290f513a5c4350ffa7b184eee62a423518f2
+# KernelSmoothing version=0.1.0; git_revision=master; git_source=https://github.com/mlakolar/KernelSmoothing.jl; tree_hash=3178afc11653d934bdb8aec4a68539fe1473ec46
+# Both fits use the fixture's explicit positive noise; estimated-noise formulas are evaluated without CE solves.
+fixture,base_noise,integrated_base_psd_noise,integrated_current_psd_noise,fda_noise,base_raw,integrated_base_psd_raw,integrated_current_psd_raw,fda_raw,integration_delta_raw,raw_vs_psd_delta_raw,smoother_diagonal_max_change,projected_covariance_max_change,raw_covariance_min_eigenvalue
+constant,1.3600232051658168e-15,1.5543122344752192e-15,3.3306690738754696e-16,1.942890293094024e-16,1.3600232051658168e-15,1.5543122344752192e-15,3.3306690738754696e-16,1.942890293094024e-16,1.942890293094024e-16,-1.3877787807814457e-16,4.218847493575595e-15,1.1213252548714081e-14,-1.1402737598063153e-15
+full_modes,0.09556629502099737,0.0972942757507735,0.0972942757507718,0.11159325235704108,0.09556629502099737,0.0972942757507735,0.0972942757507718,0.11159325235704108,0.0017279807297761324,0.014298976606269276,1.4210854715202004e-14,3.241851231905457e-14,-0.007434081512867596
