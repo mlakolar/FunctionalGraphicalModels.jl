@@ -5,7 +5,6 @@ root = normpath(joinpath(@__DIR__, ".."))
 Pkg.activate(root)
 deps = TOML.parsefile(joinpath(root, "Project.toml"))["deps"]
 urls = [
-    "BSpline" => "https://github.com/mlakolar/BSpline.jl",
     "ProximalBase" => "https://github.com/mlakolar/ProximalBase.jl",
     "ProximalSolvers" => "https://github.com/mlakolar/ProximalSolvers.jl",
     "CovarianceSelection" => "https://github.com/mlakolar/CovarianceSelection.jl",

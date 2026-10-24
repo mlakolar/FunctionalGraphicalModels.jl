@@ -33,7 +33,7 @@ end
     @test_throws ArgumentError score_covariance(fill(NaN, 3, 2, 2))
 end
 
-@testset "BSpline integration" begin
+@testset "B-spline smoothing" begin
     grid = collect(range(0.0, 1.0; length=21))
     values = zeros(3, 2, length(grid))
     for j in 1:2, i in 1:3
@@ -44,7 +44,27 @@ end
     @test smoothed.values ≈ d.values atol=1e-12
     @test smoothed.grid == d.grid
     @test all(isfinite, smooth_bspline(d; nbasis=5, penalty=0.01).values)
+    # One constant basis function fits each curve by its weighted mean, at the
+    # last grid point too.
+    w = quadrature_weights(grid)
+    level = [sum(w .* d.values[i, j, :]) / sum(w) for i in 1:3, j in 1:2]
+    @test smooth_bspline(d; nbasis=1, degree=0).values ≈ repeat(level, 1, 1, 21)
     @test_throws ArgumentError smooth_bspline(d; nbasis=2)
     @test_throws ArgumentError smooth_bspline(d; nbasis=5, penalty=-1)
     @test_throws ArgumentError smooth_bspline(d; nbasis=22)
+
+    # Knots are equally spaced on the grid interval and extended by `degree`
+    # knots on each side. With knots on the grid, hat functions give the
+    # identity, cubic B-splines take the values 1/6, 2/3, 1/6, and piecewise
+    # constants put the last grid point in the last interval.
+    design = FunctionalGraphicalModels._bspline_design
+    @test design(grid, 21, 1) ≈ Matrix(I, 21, 21) atol=1e-14
+    @test design(grid, 23, 3)[11, 11:13] ≈ [1, 4, 1] ./ 6
+    @test design(grid, 20, 0) == [Matrix(1.0I, 20, 20); [zeros(1, 19) 1.0]]
+    for degree in 0:3
+        B = design(grid, 7, degree)
+        @test size(B) == (21, 7)
+        @test all(>=(0), B)
+        @test vec(sum(B; dims=2)) ≈ ones(21)
+    end
 end

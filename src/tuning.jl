@@ -67,12 +67,7 @@ function _fgm_training_smoother(data::DenseFunctionalData, training_times;
     length(unique(train)) == length(train) || throw(ArgumentError("training_times must not repeat"))
     length(train) >= max(2, nbasis) ||
         throw(ArgumentError("the training fold has too few time points for the spline dimension"))
-    spline = BSpline.BSplineT(degree + 1, first(data.grid), last(data.grid),
-                              nbasis - degree + 1)
-    B = BSpline.bspline_basismatrix(spline, data.grid)
-    if degree == 0
-        B[end, :] .= BSpline.bspline_basismatrix(spline, [prevfloat(last(data.grid))])[1, :]
-    end
+    B = _bspline_design(data.grid, nbasis, degree)
     Bt = B[train, :]
     rank(Bt) == nbasis || throw(ArgumentError("the training spline design is rank deficient"))
     weights = quadrature_weights(data.grid[train])

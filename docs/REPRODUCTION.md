@@ -23,8 +23,9 @@
   independent-penalty and shared-group limits have analytic tests. Rank and
   penalties are supplied; full FVE/tuning workflows remain to be reproduced.
 
-Dependencies come from `master`: BSpline, ProximalBase, CovarianceSelection
-(formerly CovSel) and its ProximalSolvers dependency (formerly ProximalOPT).
+Dependencies come from `master`: ProximalBase, CovarianceSelection (formerly
+CovSel) and its ProximalSolvers dependency (formerly ProximalOPT). B-spline
+bases come from the registered BSplineKit.
 `KernelSmoothing` currently provides univariate tools, but the required
 within-curve covariance-surface smoother is implemented locally. The
 standalone Julia simulation driver adds no data-frame or plotting dependency.

@@ -3,7 +3,7 @@ module FunctionalGraphicalModels
 using LinearAlgebra
 import CovarianceSelection
 import Random
-import BSpline
+import BSplineKit
 import ProximalBase
 
 export DenseFunctionalData, quadrature_weights, score_covariance, smooth_bspline,

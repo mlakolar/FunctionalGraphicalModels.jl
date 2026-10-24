@@ -64,12 +64,29 @@ function score_covariance(scores::AbstractArray{<:Real,3}; center::Bool=true,
     Matrix(Symmetric(transpose(X) * X / (n - Int(corrected))))
 end
 
+# Values on `grid` of the `nbasis` B-splines of the given degree whose knots are
+# equally spaced on [first(grid), last(grid)] and extended by `degree` knots with
+# the same spacing on each side. BSplineKit takes the left limit at the last
+# knot, so with degree 0 the final grid point keeps its basis function.
+function _bspline_design(grid::AbstractVector{T}, nbasis::Integer,
+                         degree::Integer) where {T<:AbstractFloat}
+    a, b = first(grid), last(grid)
+    h = (b - a) / (nbasis - degree)
+    knots = vcat(a .- h .* (degree:-1:1), range(a, b; length=nbasis - degree + 1),
+                 b .+ h .* (1:degree))
+    basis = BSplineKit.BSplineBasis(BSplineKit.BSplineOrder(degree + 1), knots;
+                                    augment=Val(false))
+    BSplineKit.collocation_matrix(basis, grid, BSplineKit.Derivative(0), Matrix{T})
+end
+
 """
     smooth_bspline(data; nbasis, degree=3, penalty=0)
 
-Smooth each common-grid curve using `BSpline.jl`. Fits minimize weighted
-squared error plus `penalty` times the squared second differences of the
-basis coefficients. This is dense-curve smoothing, not sparse-data PACE.
+Smooth each common-grid curve in a basis of `nbasis` B-splines of the given
+`degree`, with equally spaced knots on the grid interval (BSplineKit.jl). Fits
+minimize weighted squared error plus `penalty` times the squared second
+differences of the basis coefficients. This is dense-curve smoothing, not
+sparse-data PACE.
 """
 function smooth_bspline(data::DenseFunctionalData; nbasis::Integer,
                         degree::Integer=3, penalty::Real=0)
@@ -77,13 +94,7 @@ function smooth_bspline(data::DenseFunctionalData; nbasis::Integer,
     nbasis >= degree + 1 || throw(ArgumentError("nbasis must be at least degree + 1"))
     nbasis <= length(data.grid) || throw(ArgumentError("nbasis cannot exceed the number of grid points"))
     isfinite(penalty) && penalty >= 0 || throw(ArgumentError("penalty must be finite and nonnegative"))
-    bs = BSpline.BSplineT(degree + 1, first(data.grid), last(data.grid), nbasis - degree + 1)
-    B = BSpline.bspline_basismatrix(bs, data.grid)
-    # Piecewise constant splines use half-open supports; use the left limit
-    # at the final point to retain the endpoint measurement.
-    if degree == 0
-        B[end, :] .= BSpline.bspline_basismatrix(bs, [prevfloat(last(data.grid))])[1, :]
-    end
+    B = _bspline_design(data.grid, nbasis, degree)
     w = quadrature_weights(data.grid)
     WB = w .* B
     A = transpose(B) * WB

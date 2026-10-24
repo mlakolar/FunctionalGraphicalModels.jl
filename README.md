@@ -10,9 +10,10 @@ Estimation of Gaussian graphical models for multivariate functional data:
 - Partially separable functional graphical models (Zapata, Oh and Petersen,
   Biometrika 2022).
 
-The package uses current `master` versions of **BSpline**, **ProximalBase** and
-**CovarianceSelection**, with **ProximalSolvers** as a transitive dependency.
-It supplies weighted FPCA and sparse functional covariance smoothing locally.
+The package uses current `master` versions of **ProximalBase** and
+**CovarianceSelection**, with **ProximalSolvers** as a transitive dependency,
+and the registered **BSplineKit** for B-spline bases. It supplies weighted FPCA
+and sparse functional covariance smoothing locally.
 
 ## Setup
 

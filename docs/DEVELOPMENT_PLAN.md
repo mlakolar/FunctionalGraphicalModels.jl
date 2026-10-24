@@ -8,7 +8,7 @@ infinite-dimensional conditional-independence guarantee.
 
 1. **Functional data foundations.** Common-grid data, quadrature-aware marginal
    and pooled FPCA, out-of-sample projection, reconstruction, B-spline smoothing,
-   and covariance with explicit normalization. Use `BSpline.jl` from master.
+   and covariance with explicit normalization. Use `BSplineKit.jl`.
    Add analytic tests, dependency setup, and this plan.
 2. **Functional graphical lasso and neighborhood selection.** Implement Qiao,
    Guo and James's equation (9), with unpenalized diagonal blocks and the ordered
@@ -55,7 +55,7 @@ means come from training data. Solvers expose convergence; a finite iterate is
 not silently declared a successful fit. Graph thresholds are explicit.
 
 Use existing packages where their current APIs implement the required primitive:
-`BSpline`, `ProximalBase`, `CovarianceSelection` (formerly `CovSel`), and
+`BSplineKit`, `ProximalBase`, `CovarianceSelection` (formerly `CovSel`), and
 `KernelSmoothing` when its univariate kernels/smoothers are applicable. Implement
 small functional-data components locally where no matching primitive exists.
 Do not replace the DFGM covariance surface smoother with independent curve
