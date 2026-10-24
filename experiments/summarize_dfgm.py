@@ -46,6 +46,19 @@ def main(root):
         with (folder / "auc.csv").open(newline="") as f:
             for r in csv.DictReader(f):
                 values[r["method"], r["target"], "full_auc"].append(float(r["full_auc"]))
+                area, lo, hi = (float(r[k]) for k in ("observed_area", "minimum_fpr", "maximum_fpr"))
+                complete = r["successful_candidates"] == r["expected_candidates"]
+                good = complete and all(map(math.isfinite, (area, lo, hi)))
+                quantities = {
+                    "observed_auc_area": area,
+                    "covered_fpr_span": hi - lo,
+                    # Bounded TPR on the unobserved FPR span gives an interval,
+                    # without appending artificial fitted graph endpoints.
+                    "auc_lower_bound": area,
+                    "auc_upper_bound": min(1.0, area + lo + 1.0 - hi),
+                }
+                for name, value in quantities.items():
+                    values[r["method"], r["target"], name].append(value if good else math.nan)
         for (method, target, loss), vals in values.items():
             # All intended times must be present and finite for this replicate.
             if len(vals) == len(s["evaluation_grid"]) and all(map(math.isfinite, vals)):

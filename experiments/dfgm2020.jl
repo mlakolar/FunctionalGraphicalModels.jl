@@ -3,6 +3,8 @@ using FunctionalGraphicalModels, LinearAlgebra, Random, TOML, Serialization, SHA
 import FunctionalDataAnalysis as FDA
 import KernelSmoothing
 import CovarianceSelection
+include("dfgm_common.jl")
+include("dfgm_factorized.jl")
 
 function option(name,default)
     i = findfirst(==("--"*name),ARGS)
@@ -37,14 +39,25 @@ function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_poin
     workgrid = sort!(unique(vcat(collect(range(0,1;length=work_points)),grid)))
     X = zeros(n,p,length(grid))
     selections = NamedTuple[]
+    cv_cache = Dict()
     for j in 1:p
         fd = FDA.component(data,j)
         selector = mode===:paper ? FDA.CurveCV([.1,.2,.3,.4];folds=n) : bandwidth
         # This is the literal whole-curve CV path. It can be expensive; pilot
         # mode fixes h and uses AIC for rank. Neither mode knows latent truth.
-        fp = FDA.fit(FDA.FPCA,fd;method=:pace,grid=workgrid,ncomponents=FDA.AIC(),
-            maxK=5,mean_bandwidth=selector,covariance_bandwidth=selector,
-            kernel=KernelSmoothing.GaussianKernel(),weighting=:subj,binning=nothing)
+        fp = if all(fd[i][1]==fd[1][1] for i in 1:n)
+            meanfit = FDA.fit(FDA.SmoothedMean,fd;grid=workgrid,bandwidth=selector,
+                kernel=KernelSmoothing.GaussianKernel(),weighting=:subj)
+            covariance = _dfgm_common_covariance(fd,meanfit,workgrid;bandwidth=selector,cache=cv_cache)
+            FDA.fit(FDA.FPCA,fd;method=:pace,grid=workgrid,ncomponents=FDA.AIC(),
+                maxK=5,mean=meanfit,covariance)
+        else
+            meanfit = FDA.fit(FDA.SmoothedMean,fd;grid=workgrid,bandwidth=selector,
+                kernel=KernelSmoothing.GaussianKernel(),weighting=:subj)
+            covariance = _dfgm_factorized_covariance(fd,meanfit,workgrid;bandwidth=selector)
+            FDA.fit(FDA.FPCA,fd;method=:pace,grid=workgrid,ncomponents=FDA.AIC(),
+                maxK=5,mean=meanfit,covariance)
+        end
         basis = FDA.basismatrix(fp.basis,grid)
         X[:,j,:] .= fp.scores*transpose(basis)
         push!(selections,(;node=j,rank=length(fp.eigenvalues),settings=fp.settings))
@@ -105,7 +118,8 @@ function observed_auc(points)
 end
 
 function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=0,
-                integration_points=101,nlambda=7,work_points=31,evaluation_points=0)
+                integration_points=101,nlambda=7,work_points=31,evaluation_points=0,
+                bias_constant=1.,lp_solver=:highs)
     mkpath(out)
     done = joinpath(out,"complete.toml")
     (isfile(done)||isfile(joinpath(out,"settings.toml"))) &&
@@ -135,21 +149,36 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     multipliers = exp.(range(log(.03),log(2.);length=nlambda))
     hs = [.15,.25,.4]
     C = direct_covariance(sim.data,sim.grid;bandwidths=hs,
-        design=setting.design===:common ? :synchronous : :independent,
+        design=setting.design===:common ? :stratified_synchronous : :independent,
         boundary=:local_linear)
+    # Retain the original default separately. This empirical menu addresses
+    # the observed sensitivity to sparse-visit covariance error. Paper-mode
+    # selection uses the same observable pointwise BIC as the other paths;
+    # it is distinct from the held-out protocol in the controlled study.
+    scaled_values = Any[:quantile,.2,.35,.5,.75,
+        sqrt(2log(effective_p)/effective_n)*(1+1/(C.min_visits*hs[2]))]
+    push!(methods,:scaled_lasso_tuned)
+    expected_candidates(method) = method===:scaled_lasso ? 1 :
+        method===:scaled_lasso_tuned ? length(scaled_values) : nlambda
     println("direct covariance ready seconds=$(time()-started)");flush(stdout)
     settings = Dict("setting_index"=>setting_index,"replicate"=>replicate,"seed"=>seed,
         "design"=>string(setting.design),"schedule"=>string(setting.schedule),
         "p"=>effective_p,"n"=>effective_n,"mode"=>string(mode),
         "integration_points"=>integration_points,"work_points"=>work_points,
         "evaluation_grid"=>sim.grid,"bandwidths"=>hs,"K1"=>2.,"K2_menu"=>multipliers,
-        "scalar_penalties"=>penalties,"bias_constant"=>1.,"threshold"=>THRESHOLD,
+        "scalar_penalties"=>penalties,"bias_constant"=>bias_constant,"lp_solver"=>string(lp_solver),"threshold"=>THRESHOLD,
         "noise_variance"=>.5,"julia_version"=>string(VERSION),
+        "scaled_lasso_penalty_menu"=>string.(scaled_values),
+        "scaled_lasso_tuned_selection"=>"pointwise BIC; empirical menu, no iid-theory transfer",
         "baseline_bandwidth_selection"=>mode===:paper ? "whole_curve_CV" : "fixed_0.25",
         "baseline_rank_selection"=>"FDA_AIC_maxK5",
         "truth_selection"=>"no_truth_used_for_tuning",
         "source_sha256"=>Dict(f=>bytes2hex(sha256(read(joinpath(@__DIR__,"..",f))))
-            for f in ("src/direct.jl","src/dfgm_simulation.jl","experiments/dfgm2020.jl")))
+            for f in ("Project.toml","src/FunctionalGraphicalModels.jl","src/direct.jl",
+                "src/dfgm_simulation.jl","experiments/dfgm2020.jl",
+                "experiments/dfgm_common.jl","experiments/dfgm_factorized.jl")))
+    manifest=joinpath(@__DIR__,"..","Manifest.toml")
+    settings["dependency_manifest_sha256"]=isfile(manifest) ? bytes2hex(sha256(read(manifest))) : "not_saved"
     open(joinpath(out,"settings.toml"),"w") do io; TOML.print(io,settings); end
     # Keep paired reporting inputs; no raw simulated data are needed to recreate.
     serialize(joinpath(out,"targets.bin"),(;grid=sim.grid,actual=sim.precision,
@@ -185,15 +214,17 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         row(io,"method","candidate","penalty","status","seconds","pd_slices","max_constraint_violation","psd_displacement","error")
         for method in methods
             println("starting $method seconds=$(time()-started)");flush(stdout)
-            for candidate in 1:(method===:scaled_lasso ? 1 : nlambda)
+            for candidate in 1:expected_candidates(method)
                 tick = time()
+                scaled = method in (:scaled_lasso,:scaled_lasso_tuned)
                 value = method in (:aclime,:l2_aclime) ? multipliers[candidate] :
-                    method===:scaled_lasso ? NaN : penalties[candidate]
+                    scaled ? scaled_values[candidate] : penalties[candidate]
                 try
                     violation,displacement = 0.,0.
-                    P = if method in (:aclime,:l2_aclime,:scaled_lasso)
-                        f = fit_direct(C;method,pilot_index=2,bias_constant=1.,K2=value,
-                            noise_variance=.5)
+                    P = if method in (:aclime,:l2_aclime,:scaled_lasso,:scaled_lasso_tuned)
+                        f = fit_direct(C;method=scaled ? :scaled_lasso : method,
+                            pilot_index=2,bias_constant,K2=scaled ? 1. : value,
+                            lambda0=scaled ? value : :quantile,noise_variance=.5,lp_solver)
                         violation = maximum(d.max_constraint_violation for d in f.diagnostics)
                         displacement = maximum(d.covariance_psd_displacement for d in f.diagnostics)
                         f.precisions
@@ -259,7 +290,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         row(io,"method","target","time_index","observed_area","full_auc","minimum_fpr","maximum_fpr","successful_candidates","expected_candidates")
         for method in methods,(target,truth) in ((:actual,sim.precision),(:nominal,sim.nominal_precision)),t in eachindex(sim.grid)
             points = [rocpoint(P,truth,t)[1:2] for (_,P) in paths[method]]
-            expected = method===:scaled_lasso ? 1 : nlambda
+            expected = expected_candidates(method)
             area,full,lo,hi = observed_auc(points)
             length(paths[method])==expected || (full=NaN)
             row(io,method,target,t,area,full,lo,hi,length(paths[method]),expected)
@@ -282,6 +313,8 @@ if abspath(PROGRAM_FILE)==@__FILE__
         mode=Symbol(option("mode","pilot")),n_override=parse(Int,option("n","0")),
         p_override=parse(Int,option("p","0")),integration_points=parse(Int,option("integration-points","101")),
         nlambda=parse(Int,option("nlambda","7")),work_points=parse(Int,option("work-points","31")),
-        evaluation_points=parse(Int,option("evaluation-points","0")))
+        evaluation_points=parse(Int,option("evaluation-points","0")),
+        bias_constant=parse(Float64,option("bias-constant","1")),
+        lp_solver=Symbol(option("lp-solver","highs")))
     exit(ok ? 0 : 1)
 end

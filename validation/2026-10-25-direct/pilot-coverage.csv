@@ -1,0 +1,13 @@
+task,status,fit_failures,elapsed_seconds
+setting-1-rep-1,completed,0,359.8950161933899
+setting-2-rep-1,completed,0,1152.8211889266968
+setting-3-rep-1,incomplete,,
+setting-4-rep-1,completed,0,2653.6707348823547
+setting-5-rep-1,incomplete,,
+setting-6-rep-1,incomplete,,
+setting-7-rep-1,completed,0,670.9762909412384
+setting-8-rep-1,completed,0,882.4012479782104
+setting-9-rep-1,completed,0,1593.3920230865479
+setting-10-rep-1,incomplete,,
+setting-11-rep-1,incomplete,,
+setting-12-rep-1,incomplete,,

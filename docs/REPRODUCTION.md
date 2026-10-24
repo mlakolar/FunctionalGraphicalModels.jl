@@ -12,8 +12,11 @@
   subject-balanced weights, PSD projection, conditional-expectation scores,
   reconstructed pointwise second moments and exact CLIME. Explicit bandwidth
   and rank; the default noise rule is documented rather than presented as a
-  complete fdapace implementation. No leave-one-curve bandwidth CV, AIC rank
-  selection or pointwise BIC tuning is currently supplied. Gaussian smoothing
+  complete fdapace implementation. The `fit_doubly` API takes explicit rank and
+  bandwidths. The new `experiments/dfgm2020.jl` driver adds whole-curve bandwidth
+  CV, AIC rank selection and pointwise BIC; its candidate grids and remaining
+  author-code differences are documented in [the direct DFGM protocol](DIRECT_DFGM.md).
+  Gaussian smoothing
   is the default; `kernel=:epanechnikov` satisfies the paper's compact-support
   kernel condition. Gaussian smoothing does not inherit that condition. The
   evaluation grid must cover every observation time. The dense overload
@@ -26,8 +29,12 @@
 Dependencies come from `master`: ProximalBase, CovarianceSelection (formerly
 CovSel) and its ProximalSolvers dependency (formerly ProximalOPT). B-spline
 bases come from the registered BSplineKit.
-`KernelSmoothing` currently provides univariate tools, but the required
-within-curve covariance-surface smoother is implemented locally. The
+`FunctionalDataAnalysis` provides local-linear marginal and cross-covariance
+surfaces backed by `KernelSmoothing`, which also provides bivariate smoothing.
+The DFGM experiment helpers aggregate the exact sufficient statistics of FDA's
+raw distinct-visit products and preserve its covariance CV convention. The
+new count-normalized direct covariance has a different expectation and is
+implemented separately in this package. The
 standalone Julia simulation driver adds no data-frame or plotting dependency.
 
 ## Seeded Qiao 2019 driver
@@ -119,9 +126,11 @@ estimating their cost and respecting the task's approved compute allowance.
 
 ## Remaining evidence for full reproduction
 
-1. Complete EJS/DFGM/partial-separability tuning and competitors. Independently
-   validate the Qiao comparison conventions against author-generated fixtures.
-2. Add the original EJS, dynamic DFGM and partial-separability generating designs.
+1. Complete EJS/partial-separability tuning and competitors. Independently
+   validate the Qiao and DFGM comparison conventions against author-generated fixtures.
+2. Add the original EJS and partial-separability generating designs. The dynamic
+   DFGM design is implemented, but its Fourier-projection target and unspecified
+   overlapping-transition conventions still need author-code reconciliation.
 3. Compare small numerical fixtures to author implementations where available,
    without copying incompatible licensed code.
 4. Run the published dimensions and repetition counts; report Monte Carlo errors.

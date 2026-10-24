@@ -40,6 +40,20 @@ function _inclusion(m, a)
     (-expm1(m*log1p(-a)), p2)
 end
 
+function _stratified_pairs(R,labels,k,strata,prob)
+    p=size(R,1)
+    total=vec(sum(R;dims=2))
+    within=zeros(p,p); same=zeros(p,p)
+    for group in 1:strata
+        B=R[:,labels.==group]
+        s=vec(sum(B;dims=2)); outer=s*transpose(s)
+        within .+= outer
+        same .+= (outer-B*transpose(B))/(k*(k-1))
+    end
+    H=((total*transpose(total)-within)/k^2+same)/(strata^2*prob^2)
+    Matrix(Symmetric(H))
+end
+
 function _equivalent_kernel(t, h, domain, boundary)
     a, b = domain
     lo, hi = max(-1.0, (a-t)/h), min(1.0, (b-t)/h)
@@ -73,12 +87,16 @@ minimum count). The supplied mean is evaluated at original times; zero means
 known centering, not empirical centering. Estimate means on independent subjects
 and pass their evaluation function when the mean is unknown.
 
-`:synchronous` requires one complete shared random grid and uses distinct-visit
+`:synchronous` requires one complete shared iid-uniform random grid and uses distinct-visit
 pairs for every entry. Its expectation has the same smoothed target, but the
 independent-schedule concentration theorem does not apply. It also needs at least
 two common grid points inside each window; empty windows remain zero and are
 reported through `pair_subjects`. A fixed deterministic grid is not the uniform
-sampling model. Stratified grids in the paper are an explicitly empirical use.
+sampling model. `:stratified_synchronous` instead requires `strata` equal-width
+strata with k>=2 visits each, and uses the correct k(k-1) within-stratum and k²
+between-stratum pair weights. This gives the product-kernel population target
+under the paper's shared stratified design. The independent-schedule
+concentration theorem still does not apply. Declare the full sampling domain.
 
 `boundary=:local_linear` uses the analytically normalized boundary equivalent
 Epanechnikov kernel, which can be signed. Interior points recover the report's
@@ -87,8 +105,8 @@ theorem is not asserted for them. Inputs are copied and no PSD repair is made.
 """
 function direct_covariance(data::FDA.MultivariateFunctionalData, grid;
         bandwidths, design::Symbol=:independent, mean=(j,t)->0.0,
-        boundary::Symbol=:error)
-    design in (:independent, :synchronous) || throw(ArgumentError("unknown design"))
+        boundary::Symbol=:error,strata::Integer=5)
+    design in (:independent, :synchronous,:stratified_synchronous) || throw(ArgumentError("unknown design"))
     boundary in (:error, :local_linear) || throw(ArgumentError("unknown boundary rule"))
     g, hs = Float64.(collect(grid)), Float64.(collect(bandwidths))
     !isempty(g) && all(isfinite,g) && issorted(g) && all(diff(g).>0) ||
@@ -107,10 +125,21 @@ function direct_covariance(data::FDA.MultivariateFunctionalData, grid;
     observations = [[fd[i] for i in 1:n] for fd in nodes]
     mmin = minimum(length(observations[j][i][1]) for j in 1:p,i in 1:n)
     mmin >= 2 || throw(ArgumentError("every curve needs at least two visits"))
-    if design === :synchronous
+    if design in (:synchronous,:stratified_synchronous)
         times = observations[1][1][1]
         all(observations[j][i][1]==times for j in 1:p,i in 1:n) ||
             throw(ArgumentError("synchronous design requires exactly one shared grid"))
+    end
+    stratum_labels=Int[]; per_stratum=0
+    if design===:stratified_synchronous
+        strata>=1 || throw(ArgumentError("strata must be positive"))
+        times=observations[1][1][1]
+        length(times)%strata==0 || throw(ArgumentError("shared visit count must be divisible by strata"))
+        per_stratum=div(length(times),strata)
+        per_stratum>=2 || throw(ArgumentError("at least two visits per stratum are required"))
+        stratum_labels=clamp.(floor.(Int,(times.-dom[1])./(dom[2]-dom[1]).*strata).+1,1,strata)
+        all(count(==(s),stratum_labels)==per_stratum for s in 1:strata) ||
+            throw(ArgumentError("each equal-width stratum must have the same number of visits"))
     end
     # Cache residuals once; caller-supplied means may be expensive.
     residuals = [[observations[j][i][2] .- mean.(j,observations[j][i][1])
@@ -143,7 +172,12 @@ function direct_covariance(data::FDA.MultivariateFunctionalData, grid;
                 for j in 1:p
                     A[j,j,v,l] += pairs[j]-Q[j]^2
                 end
-            elseif N[1]>=2
+            elseif design===:stratified_synchronous && N[1]>=2
+                times=observations[1][1][1]
+                selected=findall(u->abs(u-t)<=h,times)
+                matrix=reduce(vcat,transpose.(R))
+                A[:,:,v,l] .+= _stratified_pairs(matrix,stratum_labels[selected],per_stratum,strata,prob)
+            elseif design===:synchronous && N[1]>=2
                 for j in 1:p,k in 1:p
                     A[j,k,v,l] += (sums[j]*sums[k]-dot(R[j],R[k])) /
                         (pi2[1]*N[1]*(N[1]-1))
@@ -152,16 +186,28 @@ function direct_covariance(data::FDA.MultivariateFunctionalData, grid;
         end
     end
     A ./= n
+    all(isfinite,A) || throw(ArgumentError("covariance exceeds floating-point range; rescale observations"))
     DirectCovariance(g,hs,A,n,mmin,counts,
-        (;design,boundary,centering=:supplied_mean,kernel=:epanechnikov,domain=dom))
+        (;design,boundary,centering=:supplied_mean,kernel=:epanechnikov,domain=dom,
+            strata=design===:stratified_synchronous ? strata : nothing))
 end
 
-function _conic_model()
-    model = JuMP.Model(Clarabel.Optimizer)
+function _precision_model(;cone=false,lp_solver=:highs)
+    lp_solver in (:highs,:clarabel) || throw(ArgumentError("lp_solver must be :highs or :clarabel"))
+    conic_optimizer = cone || lp_solver===:clarabel
+    model = JuMP.Model(conic_optimizer ? Clarabel.Optimizer : HiGHS.Optimizer)
     JuMP.set_silent(model)
-    JuMP.set_optimizer_attribute(model,"tol_gap_abs",1e-7)
-    JuMP.set_optimizer_attribute(model,"tol_gap_rel",1e-7)
-    JuMP.set_optimizer_attribute(model,"tol_feas",1e-7)
+    if conic_optimizer
+        JuMP.set_optimizer_attribute(model,"tol_gap_abs",1e-7)
+        JuMP.set_optimizer_attribute(model,"tol_gap_rel",1e-7)
+        JuMP.set_optimizer_attribute(model,"tol_feas",1e-7)
+        JuMP.set_optimizer_attribute(model,"max_threads",1)
+    else
+        JuMP.set_optimizer_attribute(model,"solver","simplex")
+        JuMP.set_optimizer_attribute(model,"threads",1)
+        JuMP.set_optimizer_attribute(model,"primal_feasibility_tolerance",1e-8)
+        JuMP.set_optimizer_attribute(model,"dual_feasibility_tolerance",1e-8)
+    end
     model
 end
 
@@ -177,10 +223,10 @@ end
 This is the corrected common symmetrization for induced and Frobenius losses.
 The diagonal is retained; positive definiteness is not imposed.
 """
-function interval_symmetrize(W::AbstractMatrix{<:Real})
+function interval_symmetrize(W::AbstractMatrix{<:Real};lp_solver::Symbol=:highs)
     p = size(W,1)
     p>0 && size(W,2)==p && all(isfinite,W) || throw(ArgumentError("W must be finite and square"))
-    model = _conic_model()
+    model = _precision_model(;lp_solver)
     JuMP.@variable(model,S[1:p,1:p],Symmetric)
     JuMP.@variable(model,d[1:p,1:p]>=0)
     JuMP.@variable(model,r>=0)
@@ -218,7 +264,7 @@ Returns raw columns, diagonal pilots, budgets and checked primal violations.
 """
 function bias_aclime(matrices::AbstractArray{<:Real,3}; u, v, bias,
         pilot_index::Integer=1, K1::Real=2,K2::Real=2,noise_variance::Real=1,
-        bias_norm::Symbol=:linf,diagonal_floor::Real=1e-8)
+        bias_norm::Symbol=:linf,diagonal_floor::Real=1e-8,lp_solver::Symbol=:highs)
     p,p2,H = size(matrices)
     p==p2 && p>0 && H>0 && all(isfinite,matrices) || throw(ArgumentError("invalid covariance matrices"))
     all(issymmetric(matrices[:,:,h]) for h in 1:H) || throw(ArgumentError("matrices must be symmetric"))
@@ -231,9 +277,9 @@ function bias_aclime(matrices::AbstractArray{<:Real,3}; u, v, bias,
     bias_norm in (:linf,:l2) || throw(ArgumentError("bias_norm must be :linf or :l2"))
     A = Float64.(matrices)
     d = max.(diag(A[:,:,pilot_index]),diagonal_floor)
-    theta, budgets, W, violations = zeros(p),zeros(p),zeros(p,p),zeros(p)
+    theta, budgets, pilot_budgets, W, violations = zeros(p),zeros(p),zeros(p),zeros(p,p),zeros(p)
     for j in 1:p
-        model = _conic_model()
+        model = _precision_model(;lp_solver)
         JuMP.@variable(model,beta[1:p])
         JuMP.@variable(model,z[1:p]>=0)
         JuMP.@expression(model,t,sum(z))
@@ -249,9 +295,10 @@ function bias_aclime(matrices::AbstractArray{<:Real,3}; u, v, bias,
         JuMP.@objective(model,Min,t)
         _solve_checked!(model)
         theta[j] = max(0,JuMP.value(beta[j]))
+        pilot_budgets[j] = JuMP.value(t)
     end
     for j in 1:p
-        model = _conic_model()
+        model = _precision_model(;cone=bias_norm===:l2,lp_solver)
         JuMP.@variable(model,beta[1:p])
         JuMP.@variable(model,z[1:p]>=0)
         JuMP.@expression(model,t,sum(z))
@@ -291,7 +338,7 @@ function bias_aclime(matrices::AbstractArray{<:Real,3}; u, v, bias,
         end
     end
     maximum(violations)<=1e-5*(1+maximum(budgets)) || error("excessive precision constraint violation")
-    (;columns=W,pilot=theta,budgets,violations)
+    (;columns=W,pilot=theta,pilot_budgets,budgets,violations)
 end
 
 """
@@ -318,8 +365,10 @@ experiment drivers; no failed fit is replaced by a reference graph.
 """
 function fit_direct(C::DirectCovariance;method::Symbol=:aclime,pilot_index::Integer=1,
         bias_constant::Real,K1::Real=2,K2::Real=2,confidence::Real=0,
-        noise_variance::Real=1,lambda0=:quantile,psd_floor::Real=1e-8,threshold::Real=1e-6)
+        noise_variance::Real=1,lambda0=:quantile,psd_floor::Real=1e-8,threshold::Real=1e-6,
+        lp_solver::Symbol=:highs)
     method in (:aclime,:l2_aclime,:scaled_lasso) || throw(ArgumentError("unknown precision method"))
+    lp_solver in (:highs,:clarabel) || throw(ArgumentError("invalid lp_solver"))
     isfinite(bias_constant) && bias_constant>0 || throw(ArgumentError("bias_constant must be positive"))
     isfinite(confidence) && confidence>=0 || throw(ArgumentError("confidence must be nonnegative"))
     isfinite(threshold) && threshold>=0 || throw(ArgumentError("threshold must be nonnegative"))
@@ -347,12 +396,12 @@ function fit_direct(C::DirectCovariance;method::Symbol=:aclime,pilot_index::Inte
             result = bias_aclime(C.matrices[:,:,t,selected];u=u[selected],v=v[selected],
                 bias=bias_constant.*C.bandwidths[selected].^2,
                 pilot_index=findfirst(==(pilot_index),selected),K1,K2,noise_variance,
-                bias_norm=method===:aclime ? :linf : :l2,diagonal_floor=C.n^-2)
+                bias_norm=method===:aclime ? :linf : :l2,diagonal_floor=C.n^-2,lp_solver)
             W[:,:,t] .= result.columns
             theta = result.pilot
             violation = maximum(result.violations)
         end
-        S = interval_symmetrize(W[:,:,t])
+        S = interval_symmetrize(W[:,:,t];lp_solver)
         cap = min(1.0,C.n/max(opnorm(S,1),eps()))
         P[:,:,t] .= cap.*S
         push!(diagnostics,(;status=:optimal,max_constraint_violation=violation,
@@ -364,12 +413,14 @@ function fit_direct(C::DirectCovariance;method::Symbol=:aclime,pilot_index::Inte
     end
     positive = BitVector([isposdef(Symmetric(P[:,:,t])) for t in 1:q])
     settings = (;method,pilot_index,bias_constant,K1,K2,confidence,noise_variance,
-        lambda0,psd_floor,threshold,symmetrization=:interval_l1,solver_tolerance=1e-7,ell)
+        lambda0,psd_floor,threshold,symmetrization=:interval_l1,
+        lp_solver,socp_solver=:clarabel,lp_tolerance=lp_solver===:highs ? 1e-8 : 1e-7,
+        socp_tolerance=1e-7,ell)
     DirectPrecisionFit(copy(C.grid),P,W,adjacency,positive,diagnostics,C,settings)
 end
 
 function fit_direct(data::FDA.MultivariateFunctionalData,grid;
-        bandwidths,design=:independent,mean=(j,t)->0.0,boundary=:error,kwargs...)
-    C = direct_covariance(data,grid;bandwidths,design,mean,boundary)
+        bandwidths,design=:independent,mean=(j,t)->0.0,boundary=:error,strata=5,kwargs...)
+    C = direct_covariance(data,grid;bandwidths,design,mean,boundary,strata)
     fit_direct(C;kwargs...)
 end

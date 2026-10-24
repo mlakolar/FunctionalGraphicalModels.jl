@@ -42,11 +42,20 @@ The default mean is the explicitly known zero mean. For unknown means, fit on
 independent subjects and supply `mean=(j,t)->...`; record the split and fitting
 choices. Same-sample mean fitting does not inherit the known-mean theorem.
 
-For a shared random grid, `design=:synchronous` uses distinct-visit pairs for
+For a shared iid-uniform random grid, `design=:synchronous` uses distinct-visit pairs for
 all entries. Products of marginal window averages would incorrectly reuse
 the same visit across nodes. This design has different concentration behavior.
-The paper's stratified common grid is an empirical application of this option;
-its inclusion probabilities are not the iid binomial probabilities.
+The paper's common grid instead uses `design=:stratified_synchronous` with
+five equal-width strata and k=2,5,10 visits per stratum. Ordered pairs within
+one stratum receive denominator k(k-1); pairs between strata receive k².
+The two visit densities cancel with the domain/stratum area factor. Thus this
+version estimates the same product-kernel population covariance without
+incorrect binomial inclusion probabilities. A quadrature expectation test
+exhausts 1024 two-point Gaussian rules for the ten-visit design. The initial
+frozen pilot used the earlier binomial synchronous approximation; its common-
+grid direct fits are exploratory and must be rerun before a paper comparison.
+The new design correction does not transfer the independent-schedule
+concentration theorem to globally shared grids.
 
 `boundary=:error` is the default. `:local_linear` uses analytic truncated
 Epanechnikov moments to enforce zero first moment. It can have signed weights.
@@ -132,10 +141,14 @@ smaller-entry symmetrization. The paper's iid theory does not automatically
 cover a smoothed, projected Gram matrix. Defaults use its quantile penalty;
 `lambda0` may also be supplied explicitly.
 
-JuMP/Clarabel solves the LPs and SOCPs. Only `OPTIMAL` solutions with primal
+JuMP/HiGHS solves the LPs with single-threaded simplex at 1e-8 primal/dual
+feasibility tolerances; JuMP/Clarabel solves the SOCPs at 1e-7 feasibility/gap
+tolerances. Only `OPTIMAL` solutions with primal
 values are accepted. Second-stage constraint violations are recomputed from
 the returned primal variables. Failed programs throw; experiment drivers retain
 their error records. There is no fallback to a zero or oracle graph.
+`lp_solver=:clarabel` retains the original all-conic backend for a bounded
+runtime/feasibility comparison. Backend choices and tolerances are recorded.
 
 ## Minimal example
 
@@ -187,7 +200,16 @@ comparators are DFGM-C/G. DFGM reconstructs marginal FDA PACE scores; AIC select
 rank up to five. Pilot mode fixes its bandwidth at .25. Paper mode supplies
 whole-curve CV candidates [.1,.2,.3,.4] for mean and covariance smoothing.
 This explicit candidate grid is an implementation convention. Covariance CV
-can be expensive because FDA evaluates held-out raw products. DGM uses Gaussian
+holds the fitted mean fixed, following FDA; nested mean refitting inside
+covariance CV is not claimed. The driver factors distinct-visit sums into
+products of within-subject sums minus repeated visits. This gives the same six
+normal-equation moments and three response moments, using KernelSmoothing
+kernels and matrix products. Shared grids additionally aggregate identical
+coordinates and cache their exact smoother matrices. Golden tests compare
+surfaces, noise estimates, selected bandwidths and every CV score to FDA's
+raw-product implementation. The initial frozen pilot uses the slower raw
+implementation; later attempts record the optimized source separately.
+DGM uses Gaussian
 smoothing with the stated bandwidth order and proportionality constant one;
 the paper's exploration of constants up to three is not reproduced by that
 single constant. GGL uses the group-only joint graphical-lasso objective and
@@ -195,8 +217,20 @@ the package's ADMM solver. These distinctions remain reproduction gaps.
 
 Direct methods use known zero centering, bandwidths [.15,.25,.4], and a common
 fixed K2 menu. Their bias envelope is exploratory, not certified from truth.
-Scaled lasso uses its fixed default quantile penalty, so it has one fitted
-operating point rather than an invented regularization-path AUROC.
+The original `scaled_lasso` comparator retains its default quantile penalty,
+so it has one fitted operating point rather than an invented path AUROC.
+The driver also supplies `scaled_lasso_tuned` with six penalties: quantile,
+.2,.35,.5,.75, and `sqrt(2log(p)/n)*(1+1/(m_min*.25))`. The last is an
+explicit empirical visit adjustment. The common pointwise BIC selects this
+path; latent truth is never used. This is distinct from the held-out tuning
+in the controlled study. No iid-theory transfer is claimed for either rule.
+The driver exposes `--bias-constant` and `--lp-solver`; Slurm workers accept
+the corresponding `DFGM_BIAS_CONSTANT` and `DFGM_LP_SOLVER` environment values.
+These choices are saved. The initial constant-one path is exploratory: the
+population-bias diagnostic found larger bias ratios. It must not be called a
+theorem-calibrated comparison. The controlled stress study supplies its known
+exact bias envelope. A full practical comparison needs a prespecified
+calibration or a separately labeled data-driven selection protocol.
 
 Precision tuning uses the paper's pointwise BIC on observed covariance inputs.
 Indefinite precision candidates receive infinite BIC. If no positive-definite
@@ -210,6 +244,19 @@ Summaries require all intended time points for a replicate. Full path AUROC is
 missing unless fitted empty and complete endpoints are observed and every
 candidate succeeded. Partial observed areas remain labeled separately. Raw
 numbers are not multiplied by ten; Tables 2–3 multiply by ten for formatting.
+The support convention applies the explicit 1e-6 threshold to both estimated
+and target entries; support of the projected target is therefore a numerical
+thresholded support, not a claim of structural zeros.
+
+The summary also reports the observed FPR span and conservative area bounds.
+For an observed area A over [a,b], any completion with TPR in [0,1] has area
+in [A, min(1,A+a+1-b)]. This bounds unobserved area without inserting fitted
+graphs or claiming the path is complete. Failed candidate paths get missing
+bounds. A single scaled-lasso operating point typically gives the uninformative
+interval [0,1]. These bounds and observed areas are distinct from the paper's
+reported full AUROC. With bounded visits, the PACE reconstruction target can
+also differ from the latent process target; its losses here are empirical
+comparisons, not an assertion that its latent-target consistency theorem holds.
 
 ## Controlled additional simulations
 
@@ -225,6 +272,32 @@ reported as such; this experiment does not demonstrate adaptation to unknown
 smoothness. Additional recommended checks are integration-grid refinement
 (101 versus 201), increased Monte Carlo replicates, nonzero estimated means,
 and sensitivity to the scaled-lasso covariance PSD displacement.
+
+`experiments/scaled_lasso_calibration.jl` replays these exact 48 datasets and
+compares the quantile default with the six-candidate menu using the same
+160/40 observable residual split. All 288 fits completed and the default
+losses reproduced exactly. Penalty selection substantially improved the
+adverse default cases in this small study. See the validation report for all
+paired results and MCSE; this is an initial empirical finding with three
+replicates per configuration. Keep default and tuned results separate.
+
+**PROPOSED, not run:** add matched nonparametric temporal controls at
+n=200,500,1000, p=50, degree 10, m=8,30, curvature 4 and noise variance .5.
+Replace the constant Z by a process with
+`Cov(Z(u),Z(v)) = (1+a*abs(u-v))*exp(-a*abs(u-v))*(Sigma0-v*v')`, a=√3/.8.
+Keep the same independent rank-one component `(1+c(t-.5)^2)*v*U`, so the
+center precision remains exactly known. Compare each setting with a matched
+constant-process control. This distinguishes temporal variation from sample
+size and avoids relying only on a five-Fourier generator.
+
+**SKETCH of a known bias envelope:** the Matérn correlation has second
+derivative bounded by a². At the center, Epanechnikov moment μ₂=1/5 gives
+an operator-bias envelope
+`a²*h²/5*opnorm(Sigma0-v*v') + ((1+c*h²/5)^2-1)*norm(v)^2`.
+The first term follows from a second-order Taylor bound and the second is the
+existing exact rank-one calculation. An exact state-space sampler can use the
+Matérn representation in [Hartikainen and Särkkä (2010)](https://users.aalto.fi/~ssarkka/pub/gp-ts-kfrts.pdf).
+Implementation and validation of this extension remain future work.
 
 ## Discovery execution and evidence
 
@@ -272,4 +345,5 @@ performed. Reduced canaries and one-replicate pilots are not paper replication.
   and common symmetrization in `notes/20261019/l2_aclime_audit.md`, A4/A8,
   in the research workspace. These unpublished notes are not bundled here.
 - [Clarabel settings](https://clarabel.org/stable/api_settings/) and
-  [JuMP conic constraints](https://jump.dev/JuMP.jl/stable/manual/constraints/).
+  [JuMP conic constraints](https://jump.dev/JuMP.jl/stable/manual/constraints/),
+  [HiGHS interface](https://jump.dev/JuMP.jl/stable/packages/HiGHS/).

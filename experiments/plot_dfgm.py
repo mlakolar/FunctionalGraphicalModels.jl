@@ -14,6 +14,9 @@ with (root / "summary.csv").open(newline="") as f:
     rows = list(csv.DictReader(f))
 methods = ("aclime", "l2_aclime", "scaled_lasso", "DFGM_C", "DFGM_G")
 labels = ("Direct ACLIME", "Direct ℓ₂-ACLIME", "Direct scaled lasso", "DFGM-C", "DFGM-G")
+if any(r["method"] == "scaled_lasso_tuned" for r in rows):
+    methods += ("scaled_lasso_tuned",)
+    labels += ("Scaled lasso, BIC menu",)
 for target in ("nominal", "actual"):
     fig, axes = plt.subplots(2, 2, figsize=(9, 6), sharey=True, layout="constrained")
     for ax, indices, title in zip(axes.flat, ((1,2,3),(4,5,6),(7,8,9),(10,11,12)),
@@ -30,7 +33,7 @@ for target in ("nominal", "actual"):
         ax.grid(alpha=.2)
     handles, names = axes[0,0].get_legend_handles_labels()
     fig.legend(handles, names, loc="outside lower center", ncol=3, frameon=False)
-    fig.suptitle(f"DFGM pilot · {target} target\nOne realization per setting; fixed smoothing bandwidth; gaps are missing fits")
+    fig.suptitle(f"Exploratory DFGM pilot · {target} target\nOne realization; initial calibration; gaps mark unavailable complete-time summaries")
     for extension in ("png", "svg"):
         fig.savefig(root / f"operator-{target}.{extension}", dpi=180)
     plt.close(fig)

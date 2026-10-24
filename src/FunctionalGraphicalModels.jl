@@ -10,6 +10,7 @@ import FunctionalDataAnalysis: quadrature_weights
 import KernelSmoothing
 import JuMP
 import Clarabel
+import HiGHS
 
 export quadrature_weights, score_covariance, smooth_bspline,
        functional_glasso, FGLassoResult, FGLassoDiagnostic,

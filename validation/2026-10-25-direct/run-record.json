@@ -1,0 +1,141 @@
+{
+  "run_id": "20261025-direct-dfgm",
+  "cluster": "Discovery",
+  "remote_root": "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct",
+  "julia_version": "1.13.2",
+  "paper_replication_complete": false,
+  "conservative_allocated_running_seconds": 5302,
+  "approved_running_seconds_ceiling": 7200,
+  "approved_concurrent_cpus": 8,
+  "approved_concurrent_memory_gb": 16,
+  "larger_campaign_budget": "Pending user response; not authorized",
+  "jobs": [
+    {
+      "id": "13383332",
+      "state": "COMPLETED",
+      "elapsed_seconds": 195,
+      "purpose": "setup and initial 4366 tests"
+    },
+    {
+      "id": "13383375",
+      "state": "FAILED",
+      "elapsed_seconds": 94,
+      "purpose": "canary retained one ALMOST_OPTIMAL fit"
+    },
+    {
+      "id": "13383412",
+      "state": "TIMEOUT",
+      "elapsed_seconds": 4510,
+      "purpose": "pilot; successful optimized validation, target diagnostics and controlled stress steps"
+    },
+    {
+      "id": "13383553",
+      "state": "CANCELLED_BEFORE_START",
+      "elapsed_seconds": 0,
+      "purpose": "superseded backend validation"
+    },
+    {
+      "id": "13383592",
+      "state": "CANCELLED_BEFORE_START",
+      "elapsed_seconds": 0,
+      "purpose": "superseded optimized validation"
+    },
+    {
+      "id": "13384072",
+      "state": "COMPLETED",
+      "elapsed_seconds": 4,
+      "purpose": "reporting checks"
+    },
+    {
+      "id": "13384164",
+      "state": "COMPLETED",
+      "elapsed_seconds": 110,
+      "purpose": "final 4391 tests"
+    },
+    {
+      "id": "13384184",
+      "state": "COMPLETED",
+      "elapsed_seconds": 4,
+      "purpose": "exploratory figure labels and log scale"
+    },
+    {
+      "id": "13384835",
+      "state": "FAILED",
+      "elapsed_seconds": 102,
+      "purpose": "calibration metadata serialization; no fits"
+    },
+    {
+      "id": "13385105",
+      "state": "FAILED",
+      "elapsed_seconds": 4,
+      "purpose": "missing dependency lock; first canary stopped before fits"
+    },
+    {
+      "id": "13385219",
+      "state": "COMPLETED",
+      "elapsed_seconds": 131,
+      "purpose": "288 calibrated scaled-lasso fits and replay validation"
+    },
+    {
+      "id": "13385257",
+      "state": "COMPLETED",
+      "elapsed_seconds": 3,
+      "purpose": "final control figure layout"
+    },
+    {
+      "id": "13385447",
+      "state": "COMPLETED",
+      "elapsed_seconds": 51,
+      "purpose": "41-fit optimized paper-mode canary"
+    },
+    {
+      "id": "13385504",
+      "state": "COMPLETED",
+      "elapsed_seconds": 94,
+      "purpose": "53-fit final paper-mode and scaled-lasso-path canary"
+    }
+  ],
+  "source_variants": {
+    "pilot-source": "outputs/pilot; initial slower source, earlier common-grid approximation, exploratory bias constant",
+    "optimized2-source": "4387 tests; covariance exactness and backend benchmarks",
+    "final-source": "outputs/stress and outputs/target-check",
+    "stratified-source": "4391 tests; corrected shared stratified pair weights",
+    "calibration3-source": "outputs/calibration3; metadata conversion and validated Manifest",
+    "scaled-path-source": "outputs/scaled-path-canary; final added scaled-lasso BIC path"
+  },
+  "reporting_figures": "PNG and SVG generated in Slurm; visually inspected locally",
+  "retention": "Raw paths, per-dataset metrics/settings, failures, immutable source archives and dependency locks remain at remote root; no cleanup performed",
+  "local_artifact_sha256": {
+    "DependencyManifest.toml": "b3c2e4c3d606a301e65429c19c00a6b41ae664a12f41626c59e8b92e27a4de5e",
+    "InitialDependencyManifest.toml": "45e7e4a037f93a7a89dc854c2dd0c0c1c34072d18c62a82d53a260ece5f5d88d",
+    "backend.csv": "230311844abe936cf49d7c310486d456f665ec58eafef198f2ed698b2c6fa362",
+    "controlled-coverage.csv": "848bf11ca815580269ce1b1d648db723f263c486e95eb34e98ea84fd3ff342a9",
+    "controlled-losses.png": "845f1e4dfbc74f364caf0e4003f65d5583aa97a90530a77cf73003c6b89965a1",
+    "controlled-losses.svg": "859722d8bd9f8f7cbda85af40a4216237d0f3b14d56983a591e9d4ac8e9b753d",
+    "controlled-paired-differences.csv": "5b261b692697708ec332ceafb884073151f8f29d0e951f5ab1360428fa47a10e",
+    "controlled-summary.csv": "a60ac6661eae9527ca6d019443a5f3d3251fb56c44052f7007c8c68158cfd53f",
+    "covariance-benchmark.csv": "d0b0ea6394c258592073785f4d53e35174f01cf7070369a5747bb172d347a305",
+    "pilot-coverage.csv": "09e1000fa6a15815d249ee455b96cfa7d76fd85a951d3f715210c23e086a092b",
+    "pilot-operator-actual.png": "4bc940cfbab9a444f404826755b88dc366584e9856768ee7127e36e0772dc090",
+    "pilot-operator-actual.svg": "ca511c6b618e96bd56ec2134abe1ee58b34e16bb5450175b8abfba2e2c82b255",
+    "pilot-operator-nominal.png": "20e561ad86a8b52dd1c1815149758b85ff91495b2f0e01e47e44b0997da2df44",
+    "pilot-operator-nominal.svg": "a2759c76c624b8adbd4dfe045b4d86fe45ac7937e38d132526773837c5b832a9",
+    "pilot-summary.csv": "724ea8675b53af2f76da3f048c6c61557d1b9ee78df94f02e7acd69baac50d9d",
+    "report-validation.json": "e7d9ac2bdaf7a38dfc159d7434d9ed5495320d83376cad6392b6c262fae017a4",
+    "scaled-calibration-paired.csv": "2151fea01b5e75751af4701d6e29f0e2c69ea627476138460c02c9694b59c97e",
+    "scaled-calibration-summary.csv": "43a6b42843aedb1013808e23c4ebba7bcd2925e9117a7404848ca4933a679034",
+    "scaled-calibration-validation.json": "6bac3657fe45ce74c143bb831089198cae5b274532a5ef60abe2a0e6a687f7bc",
+    "scaled-calibration.png": "243ba53101010db608cc9324c394b260ee9783c7d753e61372b37e68c3b98bda",
+    "scaled-calibration.svg": "8d367e92514ed740dfc54fa8d0b431a4a77abe50410064ee46a87dd05445995e",
+    "scaled-path-canary/coverage.csv": "9505ff39aa46fcc23fcb40ecbc200a61c40a271d57c085feda2729ecdb60f77b",
+    "scaled-path-canary/setting-1-rep-1/complete.toml": "e8778f158eb9e2d4c197c7b30d16c386ec05776287a7422407eb6e2fffb008c6",
+    "scaled-path-canary/setting-1-rep-1/fits.csv": "c699b6a55819abe575c93fb106d80a46e4b4e734e686c5b19758038ec1d419ea",
+    "scaled-path-canary/setting-1-rep-1/settings.toml": "88df1860b2fdb010706fc5766a49d6db845556821c5e9e80643427d845d55ab3",
+    "scaled-path-canary/setting-7-rep-1/complete.toml": "cce8f160d6ce126e1de0d516b27fb6877a0573b0b116e058684de4b0bb962a9d",
+    "scaled-path-canary/setting-7-rep-1/fits.csv": "0efedc57627c677a21345843841d365c51b2523d68fbc1b1fc81dda95714c231",
+    "scaled-path-canary/setting-7-rep-1/settings.toml": "2769315187929f6a4069117eec75c55853f5f2f971c774467aeb895472be7a3c",
+    "scaled-path-canary/summary.csv": "f984e50e525e2823e98dfdd680a854c039b291ac706b6950df9e04a18f0345e6",
+    "scaled-path-canary/tasks.tsv": "ada61517040fd33eb5bda317f941ed43c112d222d9ea4e7bf4c97bc2be74c3af",
+    "target-check.csv": "7584d4c9c92ac8c48c8e758d75ad8c8bde0f017f5e505b9ed9f02ad79581ed73"
+  }
+}
