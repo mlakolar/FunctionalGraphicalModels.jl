@@ -5,6 +5,7 @@
 # a bounded paper-size pilot, not the paper's 100-replicate result.
 
 using FunctionalGraphicalModels
+import FunctionalDataAnalysis as FDA
 using CovarianceSelection
 using LinearAlgebra
 using Random
@@ -361,7 +362,7 @@ function comparison_run(opts,arguments)
             println("model=$model replicate=$replicate CV selected fglasso L=$(tuning.nbasis), M=$(tuning.ncomponents); PCA L=$(pca_tuning.nbasis)")
             flush(stdout)
             points = Dict(method=>NamedTuple[] for method in COMPARISON_METHODS)
-            S = score_covariance(tuning.fpca.scores)
+            S = score_covariance(FDA.score_array(tuning.fpca))
             bound = 1.05 * max(comparison_block_bound(S,tuning.ncomponents),eps(Float64))
             for (index,fraction) in pairs(fractions)
                 lambda = fraction*bound
@@ -390,7 +391,8 @@ function comparison_run(opts,arguments)
                         false,"solver_error",sprint(showerror,err)))
                 end
             end
-            raw_covariances = [comparison_covariance(sim.data.values[:,:,time]) for time in 1:opts["ntime"]]
+            simulated_values = FDA.to_array(sim.data)
+            raw_covariances = [comparison_covariance(simulated_values[:,:,time]) for time in 1:opts["ntime"]]
             scalar_bound = 1.05 * max(maximum(comparison_scalar_bound,raw_covariances),eps(Float64))
             counts,valid = comparison_scalar_path!(diagnostics_io,failures_io,raw_covariances,
                 scalar_bound,fractions,model,replicate,seed,opts)
@@ -405,7 +407,7 @@ function comparison_run(opts,arguments)
                     valid[index] ? "" : "At least one timepoint fit failed; aggregate graph metrics withheld."))
                 valid[index] || (failed_points += 1)
             end
-            pca_covariance = score_covariance(pca_tuning.fpca.scores)
+            pca_covariance = score_covariance(FDA.score_array(pca_tuning.fpca))
             pca_bound = 1.05 * max(comparison_scalar_bound(pca_covariance),eps(Float64))
             pca_counts,pca_valid = comparison_scalar_path!(diagnostics_io,failures_io,[pca_covariance],
                 pca_bound,fractions,model,replicate,seed,opts;method="PCA")

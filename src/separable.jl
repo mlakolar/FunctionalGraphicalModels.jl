@@ -16,6 +16,7 @@ struct JointGraphicalLassoFit
     dual_residual::Float64
     objective::Float64
     positive_definite::BitVector
+    settings::NamedTuple
 end
 
 function _joint_penalty(A, lambda, alpha)
@@ -62,6 +63,8 @@ certified. Inputs and solver parameters are converted to `Float64`.
 ADMM uses `ProximalBase.LogDetLoss` and the exact sparse-group proximal map:
 entrywise soft thresholding followed by group shrinkage across components.
 The returned residuals and `converged` flag must be inspected after stopping.
+The mixing default `alpha=0.5` retains FGM's equal mixture; the solver defaults
+are FGM numerical controls. All choices are stored in `settings`.
 """
 function joint_graphical_lasso(S::AbstractArray{<:Real,3}; lambda::Real,
                               alpha::Real=0.5, rho::Real=1.0,
@@ -171,7 +174,8 @@ function joint_graphical_lasso(S::AbstractArray{<:Real,3}; lambda::Real,
     end
     positive = BitVector([isposdef(Symmetric(@view Z[:, :, l])) for l in 1:m])
     return JointGraphicalLassoFit(Z, X, converged, iterations, primal, dual,
-        _joint_objective(covariances, Z, lambda, alpha), positive)
+        _joint_objective(covariances, Z, lambda, alpha), positive,
+        (; lambda, alpha, rho, maxiter=Int(maxiter), abstol, reltol))
 end
 
 """A shared-basis functional graph fit; `adjacency` is the union of component graphs."""
@@ -184,10 +188,11 @@ struct SeparableFit{F}
     adjacency::BitMatrix
     fpca::F
     diagnostics::JointGraphicalLassoFit
+    settings::NamedTuple
 end
 
 """
-    fit_separable(data::DenseFunctionalData; lambda, alpha=0.5,
+    fit_separable(data::FDA.MultivariateFunctionalData; lambda, alpha=0.5,
                   ncomponents=2, threshold=1e-6, kwargs...)
 
 Estimate the partially separable functional graphical model of Zapata, Oh,
@@ -200,13 +205,17 @@ The union of component supports describes the truncated functional graph under
 Gaussianity and partial separability. If partial separability fails, these
 are graphs of the individual projected score vectors; no equivalence to the
 full-process conditional independence graph is asserted.
+The defaults retain FGM's two-component truncation, equal penalty mixture,
+and graph threshold. FDA's pooled FPCA uses `n-1` eigenvalues and explicitly
+sets `maxK=ncomponents`; graph covariance scaling remains `1/n`.
 """
-function fit_separable(data::DenseFunctionalData; lambda::Real,
+function fit_separable(data::FDA.MultivariateFunctionalData; lambda::Real,
                        alpha::Real=0.5, ncomponents::Integer=2,
                        threshold::Real=1e-6, kwargs...)
     isfinite(threshold) && threshold >= 0 || throw(ArgumentError("threshold must be finite and nonnegative"))
-    fpca = fit_fpca(data; ncomponents=ncomponents, basis=:pooled)
-    scores = fpca.scores
+    _dense_parts(data)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:pooled)
+    scores = FDA.score_array(fpca)
     n, p, m = size(scores)
     correlations = zeros(p, p, m)
     scales = zeros(p, m)
@@ -230,5 +239,16 @@ function fit_separable(data::DenseFunctionalData; lambda::Real,
         end
     end
     return SeparableFit(precision, solver.precision, correlations, scales,
-                        supports, adjacency, fpca, solver)
+                        supports, adjacency, fpca, solver,
+                        (; threshold=Float64(threshold)))
+end
+
+function Base.show(io::IO, fit::JointGraphicalLassoFit)
+    print(io, "JointGraphicalLassoFit(settings=", fit.settings,
+        ", converged=", fit.converged, ")")
+end
+
+function Base.show(io::IO, fit::SeparableFit)
+    print(io, "SeparableFit(settings=", fit.settings, ", diagnostics=",
+        fit.diagnostics, ", fpca=", fit.fpca, ")")
 end

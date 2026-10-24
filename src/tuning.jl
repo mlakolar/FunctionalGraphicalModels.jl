@@ -5,9 +5,12 @@ Time-fold selection of spline dimension `nbasis` and marginal FPCA truncation
 `ncomponents`. Rows of `losses` index `nbasis_grid`; columns index
 `ncomponents_grid`. `fold_losses` additionally indexes validation folds.
 `reasons` explains invalid candidates, whose losses are `Inf`. `smoothed` and
-`fpca` are refitted to all observed times at the selected dimensions.
+`fpca` are refitted to all observed times at the selected dimensions. They are
+FDA multivariate data and FPCA objects. The smoothing metadata records the
+spline degree, second-difference penalty, quadrature and training times;
+the FDA fit records its FPCA settings.
 """
-struct FGMComponentSelection{D<:DenseFunctionalData,F<:FPCAResult}
+struct FGMComponentSelection{D<:FDA.MultivariateFunctionalData,F<:FDA.MultivariateFPCA}
     nbasis::Int
     ncomponents::Int
     nbasis_grid::Vector{Int}
@@ -53,10 +56,11 @@ end
 
 # The spline support is the original complete interval, even if endpoints are
 # held out. Only values at `training_times` enter the coefficient fit.
-function _fgm_training_smoother(data::DenseFunctionalData, training_times;
+function _fgm_training_smoother(data::FDA.MultivariateFunctionalData, training_times;
                                 nbasis::Integer, degree::Integer=3,
                                 penalty::Real=0)
-    n, p, nt = size(data.values)
+    values, grid = _dense_parts(data)
+    n, p, nt = size(values)
     degree >= 0 || throw(ArgumentError("degree must be nonnegative"))
     nbasis >= degree + 1 || throw(ArgumentError("nbasis must be at least degree + 1"))
     isfinite(penalty) && penalty >= 0 || throw(ArgumentError("penalty must be finite and nonnegative"))
@@ -67,10 +71,10 @@ function _fgm_training_smoother(data::DenseFunctionalData, training_times;
     length(unique(train)) == length(train) || throw(ArgumentError("training_times must not repeat"))
     length(train) >= max(2, nbasis) ||
         throw(ArgumentError("the training fold has too few time points for the spline dimension"))
-    B = _bspline_design(data.grid, nbasis, degree)
+    B = _bspline_design(grid, nbasis, degree)
     Bt = B[train, :]
     rank(Bt) == nbasis || throw(ArgumentError("the training spline design is rank deficient"))
-    weights = quadrature_weights(data.grid[train])
+    weights = quadrature_weights(grid[train])
     WB = weights .* Bt
     gram = transpose(Bt) * WB
     if penalty > 0 && nbasis > 2
@@ -78,31 +82,28 @@ function _fgm_training_smoother(data::DenseFunctionalData, training_times;
         gram .+= penalty .* (transpose(D) * D)
     end
     factor = cholesky(Symmetric(gram))
-    fitted = similar(data.values)
+    fitted = similar(values)
     for j in 1:p, i in 1:n
-        coefficients = factor \ (transpose(WB) * data.values[i, j, train])
+        coefficients = factor \ (transpose(WB) * values[i, j, train])
         fitted[i, j, :] .= B * coefficients
     end
-    DenseFunctionalData(fitted, data.grid)
+    metadata = (; method=:pspline, nbasis=Int(nbasis), degree=Int(degree),
+        penalty, penalty_order=2, weighting=:trapezoidal, grid=copy(grid),
+        training_times=copy(train))
+    _dense_data(fitted, grid; ids=FDA.ids(data), metadata)
 end
 
-function _fgm_retained_rank_reason(fpca::FPCAResult, m)
-    for j in axes(fpca.eigenvalues, 2)
-        largest = fpca.eigenvalues[1, j]
-        tolerance = max(size(fpca.scores, 1), length(fpca.grid)) * eps(eltype(fpca.scores)) * largest
-        smallest = minimum(@view fpca.eigenvalues[1:m, j])
+function _fgm_retained_rank_reason(fpca::FDA.MultivariateFPCA, m)
+    scores = FDA.score_array(fpca)
+    for j in eachindex(fpca.eigenvalues)
+        largest = fpca.eigenvalues[j][1]
+        tolerance = max(size(scores, 1), length(fpca.bases[j].grid)) * eps(eltype(scores)) * largest
+        smallest = minimum(@view fpca.eigenvalues[j][1:m])
         if !(largest > 0 && smallest > tolerance)
             return "retained FPCA scores are rank deficient at node $j"
         end
     end
     ""
-end
-
-function _fgm_truncate_fpca(fpca::FPCAResult{T}, m) where {T}
-    1 <= m <= size(fpca.scores, 3) || throw(ArgumentError("invalid FPCA truncation"))
-    FPCAResult{T}(fpca.scores[:, :, 1:m], fpca.eigenfunctions[:, 1:m, :],
-                  fpca.eigenvalues[1:m, :], copy(fpca.mean), copy(fpca.grid),
-                  copy(fpca.weights))
 end
 
 """
@@ -114,15 +115,15 @@ means and FPCA using only outcomes at `training_times`, then returns the full
 grid `prediction`, `smoothed` training-curve fits, and their truncated `fpca`.
 No outcomes at held-out times are used to estimate any of these objects.
 """
-function _fgm_fold_prediction(data::DenseFunctionalData, training_times;
+function _fgm_fold_prediction(data::FDA.MultivariateFunctionalData, training_times;
                               nbasis::Integer, ncomponents::Integer,
                               degree::Integer=3, penalty::Real=0)
     ncomponents <= nbasis || throw(ArgumentError("ncomponents must not exceed nbasis"))
     smoothed = _fgm_training_smoother(data, training_times; nbasis, degree, penalty)
-    fpca = fit_fpca(smoothed; ncomponents)
+    fpca = FDA.fit(FDA.FPCA, smoothed; basis=:marginal, ncomponents, maxK=ncomponents)
     reason = _fgm_retained_rank_reason(fpca, ncomponents)
     isempty(reason) || throw(ArgumentError(reason))
-    (; prediction=reconstruct(fpca), smoothed, fpca)
+    (; prediction=FDA.reconstruct(fpca), smoothed, fpca)
 end
 
 """
@@ -148,14 +149,22 @@ rank deficiency receive `Inf` and an explanation in `reasons`. At least one
 candidate must be valid in every fold. Exact loss ties follow input-grid order.
 This chooses `L` and `M`; it does not select the graph regularization penalty.
 
+Default grids `5:10` and `1:6`, five randomized folds, the current default RNG,
+cubic splines (`degree=3`) and no penalty (`penalty=0`) retain FGM's existing
+choices. The default common grid partition is an FGM implementation choice.
+FDA marginal dense FPCA is fitted at each candidate count with `maxK=M`,
+so the requested fixed count is available up to FGM's `n-1` limit. All other
+FPCA settings use FDA's documented dense defaults and are stored on `fpca`.
+
 Source: <https://personal.lse.ac.uk/qiaox/qiao.links/research_papers/2017_FGM.pdf>,
 Section 3.3.
 """
-function select_fgm_components(data::DenseFunctionalData; nbasis_grid=5:10,
+function select_fgm_components(data::FDA.MultivariateFunctionalData; nbasis_grid=5:10,
                                ncomponents_grid=1:6, fold_ids=nothing,
                                folds=5, rng=Random.default_rng(),
                                degree::Integer=3, penalty::Real=0)
-    n, p, nt = size(data.values)
+    values, grid = _dense_parts(data)
+    n, p, nt = size(values)
     n >= 2 || throw(ArgumentError("component selection requires two subjects"))
     degree >= 0 || throw(ArgumentError("degree must be nonnegative"))
     isfinite(penalty) && penalty >= 0 || throw(ArgumentError("penalty must be finite and nonnegative"))
@@ -181,10 +190,9 @@ function select_fgm_components(data::DenseFunctionalData; nbasis_grid=5:10,
         for fold in 1:nfolds
             train = findall(!=(fold), ids)
             test = findall(==(fold), ids)
-            local fpca
+            local smoothed
             try
                 smoothed = _fgm_training_smoother(data, train; nbasis=L, degree, penalty)
-                fpca = fit_fpca(smoothed; ncomponents=maximum(Ms[valid]))
             catch err
                 err isa InterruptException && rethrow()
                 message = "fold $fold: " * sprint(showerror, err)
@@ -195,14 +203,23 @@ function select_fgm_components(data::DenseFunctionalData; nbasis_grid=5:10,
             end
             for mi in valid
                 M = Ms[mi]
-                reason = _fgm_retained_rank_reason(fpca, M)
-                if !isempty(reason)
-                    message = "fold $fold: " * reason
+                local fpca
+                try
+                    # FDA rejects fixed counts above the retained positive rank.
+                    # Fit candidates separately so a rank-deficient larger count
+                    # cannot invalidate a smaller, valid candidate.
+                    fpca = FDA.fit(FDA.FPCA, smoothed; basis=:marginal,
+                        ncomponents=M, maxK=M)
+                    reason = _fgm_retained_rank_reason(fpca, M)
+                    isempty(reason) || throw(ArgumentError(reason))
+                catch err
+                    err isa InterruptException && rethrow()
+                    message = "fold $fold: " * sprint(showerror, err)
                     reasons[li, mi] *= isempty(reasons[li, mi]) ? message : "; " * message
                     continue
                 end
-                prediction = reconstruct(_fgm_truncate_fpca(fpca, M))
-                error = prediction.values[:, :, test] .- data.values[:, :, test]
+                prediction = FDA.to_array(FDA.reconstruct(fpca))
+                error = prediction[:, :, test] .- values[:, :, test]
                 fold_losses[li, mi, fold] = sum(abs2, error) / (n * p * length(test))
             end
         end

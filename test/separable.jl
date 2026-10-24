@@ -39,6 +39,27 @@
     @test_throws ArgumentError joint_graphical_lasso(S; lambda=0.1, rho=nextfloat(0.0))
 end
 
+@testset "Pooled rank can exceed each node's rank" begin
+    # Two rank-(n-1) node covariances can pool to rank p*(n-1).
+    # FDA PR #16 restores this range; no local pooled eigenstep is needed.
+    n, p, q = 3, 2, 9
+    grid = collect(range(0, 1; length=q))
+    values = randn(MersenneTwister(416), n, p, q)
+    data = FunctionalGraphicalModels._dense_data(values, grid)
+    m = p * (n - 1)
+    fit = fit_separable(data; lambda=2.0, ncomponents=m)
+    @test fit.diagnostics.converged
+    @test fit.fpca isa FDA.MultivariateFPCA
+    @test fit.fpca.basis == :pooled
+    @test fit.fpca.settings.maxK == m
+    @test size(FDA.score_array(fit.fpca)) == (n, p, m)
+    @test length(fit.fpca.pooled.eigenvalues) == m
+    @test all(>(0), fit.fpca.pooled.eigenvalues)
+    @test !any(fit.adjacency)
+    @test FDA.to_array(FDA.reconstruct(fit.fpca)) ≈ values atol=1e-12
+    @test_throws ArgumentError fit_separable(data; lambda=2.0, ncomponents=m+1)
+end
+
 @testset "Cross-component penalty normalization" begin
     # alpha=1 decouples the component likelihoods and penalties exactly.
     correlations = [0.55,-0.35,0.05]
@@ -84,9 +105,13 @@ end
         values[i,2,t] = 0.5*a+c + 0.3*d*phi
         values[i,3,t] = e + 0.3*f*phi
     end
-    fit = fit_separable(DenseFunctionalData(values,grid);
+    fit = fit_separable(FunctionalGraphicalModels._dense_data(values,grid);
         lambda=0.1, ncomponents=2, alpha=0.5, abstol=1e-8, reltol=1e-7)
     @test fit.diagnostics.converged
+    @test fit.settings.threshold == 1e-6
+    @test fit.diagnostics.settings.alpha == 0.5
+    @test fit.fpca.settings.maxK == 2
+    @test occursin("settings=", sprint(show, fit))
     @test size(fit.precisions) == (p,p,2)
     @test all(fit.adjacency .== dropdims(any(fit.component_adjacency; dims=3); dims=3))
     @test fit.adjacency[1,2]

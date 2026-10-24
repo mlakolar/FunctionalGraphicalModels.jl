@@ -1,4 +1,6 @@
-@testset "Dense functional data and integration" begin
+import FunctionalDataAnalysis as FDA
+
+@testset "FDA functional data and integration" begin
     grid = [0.0, 0.1, 0.4, 1.0]
     w = quadrature_weights(grid)
     @test w ≈ [0.05, 0.2, 0.45, 0.3]
@@ -9,14 +11,20 @@
     @test_throws ArgumentError quadrature_weights([1.0, 0.0])
     @test_throws ArgumentError quadrature_weights([0.0, Inf])
     values = reshape(collect(1.0:24.0), 3, 2, 4)
-    d = DenseFunctionalData(values, grid)
+    d = FDA.MultivariateFunctionalData([FDA.GridFunctionalData(values[:, j, :], grid) for j in 1:2])
     values[1] = -10
     grid[1] = -1
-    @test d.values[1] == 1
-    @test d.grid[1] == 0
-    @test_throws DimensionMismatch DenseFunctionalData(ones(3, 2, 3), d.grid)
-    @test_throws ArgumentError DenseFunctionalData(fill(NaN, 3, 2, 4), d.grid)
-    @test_throws ArgumentError DenseFunctionalData(zeros(0, 2, 4), d.grid)
+    @test FDA.to_array(d)[1] == 1
+    @test FDA.component(d, 1).grid[1] == 0
+    @test_throws DimensionMismatch FunctionalGraphicalModels._dense_data(ones(3, 2, 3), FDA.component(d, 1).grid)
+    @test_throws ArgumentError FunctionalGraphicalModels._dense_data(fill(NaN, 3, 2, 4), FDA.component(d, 1).grid)
+    @test_throws ArgumentError FunctionalGraphicalModels._dense_data(zeros(0, 2, 4), FDA.component(d, 1).grid)
+    @test_throws ArgumentError FunctionalGraphicalModels._dense_data(zeros(3, 0, 4), FDA.component(d, 1).grid)
+    copied_values, copied_grid = FunctionalGraphicalModels._dense_parts(d)
+    copied_values[1] = -3
+    copied_grid[1] = -3
+    @test FDA.to_array(d)[1] == 1
+    @test FDA.component(d, 1).grid[1] == 0
 end
 
 @testset "Node-major score covariance" begin
@@ -39,19 +47,39 @@ end
     for j in 1:2, i in 1:3
         values[i, j, :] .= i .+ j .* grid
     end
-    d = DenseFunctionalData(values, grid)
+    d = FDA.MultivariateFunctionalData([FDA.GridFunctionalData(values[:, j, :], grid) for j in 1:2])
     smoothed = smooth_bspline(d; nbasis=2, degree=1)
-    @test smoothed.values ≈ d.values atol=1e-12
-    @test smoothed.grid == d.grid
-    @test all(isfinite, smooth_bspline(d; nbasis=5, penalty=0.01).values)
+    @test FDA.to_array(smoothed) ≈ FDA.to_array(d) atol=1e-12
+    @test FDA.component(smoothed, 1).grid == FDA.component(d, 1).grid
+    @test all(isfinite, FDA.to_array(smooth_bspline(d; nbasis=5, penalty=0.01)))
+    @test smoothed isa FDA.MultivariateFunctionalData
+    @test FDA.component(smoothed, 1).metadata.method === :pspline
+    @test FDA.component(smoothed, 1).metadata.nbasis == 2
+    @test FDA.component(smoothed, 1).metadata.degree == 1
+    @test FDA.component(smoothed, 1).metadata.penalty == 0
+    labelled = FunctionalGraphicalModels._dense_data(values, grid; ids=[:a, :b, :c])
+    @test FDA.ids(smooth_bspline(labelled; nbasis=2, degree=1)) == [:a, :b, :c]
     # One constant basis function fits each curve by its weighted mean, at the
     # last grid point too.
     w = quadrature_weights(grid)
-    level = [sum(w .* d.values[i, j, :]) / sum(w) for i in 1:3, j in 1:2]
-    @test smooth_bspline(d; nbasis=1, degree=0).values ≈ repeat(level, 1, 1, 21)
+    level = [sum(w .* FDA.to_array(d)[i, j, :]) / sum(w) for i in 1:3, j in 1:2]
+    @test FDA.to_array(smooth_bspline(d; nbasis=1, degree=0)) ≈ repeat(level, 1, 1, 21)
     @test_throws ArgumentError smooth_bspline(d; nbasis=2)
     @test_throws ArgumentError smooth_bspline(d; nbasis=5, penalty=-1)
     @test_throws ArgumentError smooth_bspline(d; nbasis=22)
+
+    # Dense-only FGM smoothing rejects irregular, missing, and mismatched grids.
+    irregular = FDA.MultivariateFunctionalData([FDA.IrregularFunctionalData(
+        [grid, grid, grid], [values[i, 1, :] for i in 1:3])])
+    @test_throws ArgumentError smooth_bspline(irregular; nbasis=2, degree=1)
+    missing_values = Matrix{Union{Missing,Float64}}(values[:, 1, :])
+    missing_values[1, 1] = missing
+    incomplete = FDA.MultivariateFunctionalData([FDA.GridFunctionalData(missing_values, grid)])
+    @test_throws ArgumentError smooth_bspline(incomplete; nbasis=2, degree=1)
+    different_grid = FDA.MultivariateFunctionalData([
+        FDA.GridFunctionalData(values[:, 1, :], grid),
+        FDA.GridFunctionalData(values[:, 2, :], grid .+ 0.01)])
+    @test_throws ArgumentError smooth_bspline(different_grid; nbasis=2, degree=1)
 
     # Knots are equally spaced on the grid interval and extended by `degree`
     # knots on each side. With knots on the grid, hat functions give the

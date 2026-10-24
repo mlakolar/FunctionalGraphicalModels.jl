@@ -51,7 +51,8 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
-      - name: Resolve ecosystem master dependencies
+      # The script resolves KernelSmoothing (master) before FDA (main), also on 1.10.
+      - name: Resolve ecosystem URL dependencies including FDA
         shell: julia --color=yes {0}
         run: include(joinpath(ENV["GITHUB_WORKSPACE"], "scripts", "instantiate.jl"))
       - uses: julia-actions/julia-buildpkg@v1

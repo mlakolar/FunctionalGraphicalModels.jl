@@ -70,19 +70,23 @@ end
     for i in 1:n,k in 1:p,s in 1:t
         values[i,k,s] = 2a[i,k]*sinpi(k*grid[s]) + 0.3b[i,k]*cospi(grid[s])
     end
-    data = DenseFunctionalData(values,grid)
-    fpca = fit_fpca(data; ncomponents=2,basis=:marginal)
+    data = FunctionalGraphicalModels._dense_data(values,grid)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents=2, maxK=2, basis=:marginal)
     fit = functional_neighborhood(data,0.08; ncomponents=2)
     for j in 1:p
         projected = zeros(n,p,2)
         for i in 1:n,k in 1:p,l in 1:2
-            projected[i,k,l] = sum((values[i,k,s]-fpca.mean[k,s])*
-                fpca.weights[s]*fpca.eigenfunctions[s,l,j] for s in 1:t)
+            projected[i,k,l] = sum((values[i,k,s]-fpca.means[k].values[1,s])*
+                fpca.bases[j].weights[s]*fpca.bases[j].values[s,l] for s in 1:t)
         end
         explicit = functional_neighborhood(projected,0.08)
         @test fit.coefficients[j] ≈ explicit.coefficients[j] atol=1e-9
     end
     @test size(fit.target_bases) == (t,2,p)
+    @test fit.fpca isa FDA.MultivariateFPCA
+    @test fit.settings.rule === :or
+    @test all(s -> s.maxK == 2, fit.fpca.settings.node_settings)
+    @test occursin("settings=", sprint(show, fit))
 end
 
 @testset "Selective cross-validation (EJS Algorithm 2)" begin

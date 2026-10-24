@@ -9,8 +9,11 @@
         values[i,2,t] = -2 + 0.4*a+c+0.25*d*phi
         values[i,3,t] = 1 + e+0.25*f*phi
     end
-    fit = fit_doubly(DenseFunctionalData(values,grid);lambda=0.0,ncomponents=2)
+    data = FunctionalGraphicalModels._dense_data(values,grid)
+    fit = fit_doubly(data;lambda=0.0,ncomponents=2)
     @test fit.method == :dense_reconstruction
+    @test fit.lambda == zeros(q)
+    @test fit.threshold == 1e-6
     @test size(fit.adjacency) == (p,p,q)
     @test all(fit.positive_definite)
     for t in 1:q
@@ -20,16 +23,29 @@
         @test all(!fit.adjacency[j,j,t] for j in 1:p)
     end
     @test maximum(abs, sum(fit.reconstruction;dims=1)) < 1e-9
-    @test_throws DimensionMismatch fit_doubly(DenseFunctionalData(values,grid);
+    @test_throws DimensionMismatch fit_doubly(FunctionalGraphicalModels._dense_data(values,grid);
         lambda=[0.1],ncomponents=2)
-    @test_throws ArgumentError fit_doubly(DenseFunctionalData(values,grid);
+    @test_throws ArgumentError fit_doubly(FunctionalGraphicalModels._dense_data(values,grid);
         lambda=-0.1,ncomponents=2)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,ncomponents=2,bandwidth=0.2)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,ncomponents=2,noise_variance=0.04)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,ncomponents=2,grid=grid)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,ncomponents=2,kernel=:epanechnikov)
+    mixed = FDA.MultivariateFunctionalData([
+        FDA.component(data, 1),
+        FDA.IrregularFunctionalData([copy(grid) for _ in 1:n],
+            [values[i,2,:] for i in 1:n])])
+    @test_throws ArgumentError fit_doubly(mixed;lambda=0.1,ncomponents=2)
+    incomplete_values = Matrix{Union{Missing,Float64}}(values[:,1,:])
+    incomplete_values[1,1] = missing
+    incomplete = FDA.MultivariateFunctionalData([
+        FDA.GridFunctionalData(incomplete_values, grid)])
+    @test_throws ArgumentError fit_doubly(incomplete;lambda=0.1,ncomponents=2)
 end
 
-@testset "Sparse covariance smoothing and analytic conditional scores" begin
-    # Constant random curves have covariance C(s,t)=1. Observation schedules
-    # repeat every 12 subjects. The 60 sinusoidal scores have mean zero and
-    # variance one within every schedule group, so covariance smoothing is exact.
+@testset "Sparse FDA covariance smoothing and analytic conditional scores" begin
+    # Constant random curves have covariance C(s,t)=1. The schedules repeat
+    # every 12 subjects, and every schedule group has variance-one scores.
     n = 60
     times = Matrix{Vector{Float64}}(undef,n,1)
     values = similar(times)
@@ -39,89 +55,73 @@ end
                                   length=5+mod(i,3)))
         values[i,1] = fill(scores[i],length(times[i,1]))
     end
-    data = SparseFunctionalData(times,values)
+    data = FDA.MultivariateFunctionalData([
+        FDA.IrregularFunctionalData(times[:,1], values[:,1])])
     grid = collect(range(0,1; length=9))
-    fpca = fit_sparse_fpca(data;grid=grid,ncomponents=1,
-        bandwidth=0.3,noise_variance=0.04)
-    @test fpca.kernel == :gaussian
-    @test fpca.bandwidth == 0.3
-    @test fpca.eigenvalues[1,1] ≈ 1 atol=1e-8
-    @test fpca.eigenfunctions[:,1,1] ≈ ones(9) atol=1e-8
-    @test fpca.covariances[:,:,1] ≈ ones(9,9) atol=1e-8
-    @test maximum(abs,fpca.mean) < 1e-10
-    for i in 1:n
-        count = length(times[i,1])
-        @test fpca.scores[i,1,1] ≈ count/(count+0.04)*scores[i] atol=1e-7
-    end
     fit = fit_doubly(data;lambda=0.1,grid=grid,bandwidth=0.3,
         ncomponents=1,noise_variance=0.04)
+    fpca = fit.fpca
+    node = FDA.component(fpca, 1)
+    @test fpca isa FDA.MultivariateFPCA
+    @test node.settings.kernel isa FunctionalGraphicalModels.KernelSmoothing.GaussianKernel
+    @test node.settings.mean_bandwidth == 0.3
+    @test node.settings.covariance_bandwidth == 0.3
+    @test node.settings.diagonal_bandwidth == 0.3
+    @test node.settings.weighting == :subj
+    @test node.settings.binning === nothing
+    @test node.settings.maxK == length(grid)
+    @test node.settings.eigen_tol == 100eps(Float64)
+    @test node.eigenvalues[1] ≈ 1 atol=1e-8
+    @test node.basis.values[:,1] ≈ ones(9) atol=1e-8
+    @test node.settings.full_projected_covariance ≈ ones(9,9) atol=1e-8
+    @test maximum(abs,node.mean.values) < 1e-10
+    for i in 1:n
+        count = length(times[i,1])
+        @test node.scores[i,1] ≈ count/(count+0.04)*scores[i] atol=1e-7
+    end
     @test fit.method == :sparse_conditional_scores
+    @test fit.lambda == fill(0.1,length(grid))
+    @test fit.threshold == 1e-6
     @test all(isfinite,fit.precisions)
     @test !any(fit.adjacency)
-    @test_throws ArgumentError fit_sparse_fpca(data;grid=grid,
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,grid=grid,
         ncomponents=1,bandwidth=0)
-    @test_throws ArgumentError fit_sparse_fpca(data;grid=grid,
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,grid=grid,
         ncomponents=1,bandwidth=0.3,noise_variance=-1)
-    @test_throws ArgumentError fit_sparse_fpca(data;grid=grid,
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,grid=grid,
         ncomponents=2,bandwidth=0.3,noise_variance=0.04)
-    duplicate_times = deepcopy(times)
-    duplicate_times[1,1][2] = duplicate_times[1,1][1]
-    @test_throws ArgumentError SparseFunctionalData(duplicate_times,values)
-    @test_throws DimensionMismatch SparseFunctionalData(times,values[1:end-1,:])
-    @test_throws ArgumentError fit_sparse_fpca(data;grid=grid,
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,grid=grid,
         ncomponents=1,bandwidth=0.3,kernel=:unknown)
-    @test_throws ArgumentError fit_sparse_fpca(data;grid=collect(range(0.1,0.9;length=9)),
-        ncomponents=1,bandwidth=0.3)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,
+        grid=collect(range(0.1,0.9;length=9)),ncomponents=1,bandwidth=0.3)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,bandwidth=0.3)
+    @test_throws ArgumentError fit_doubly(data;lambda=0.1,grid=grid)
     # A sufficiently wide compact kernel retains a nonsingular local design.
-    compact = fit_sparse_fpca(data;grid=grid,ncomponents=1,
-        bandwidth=1.1,noise_variance=0.04,kernel=:epanechnikov)
-    @test compact.kernel == :epanechnikov
-    @test compact.eigenvalues[1,1] ≈ 1 atol=1e-8
-    @test compact.scores ≈ fpca.scores atol=1e-7
     compact_graph = fit_doubly(data;lambda=0.1,grid=grid,bandwidth=1.1,
         ncomponents=1,noise_variance=0.04,kernel=:epanechnikov)
-    @test compact_graph.fpca.kernel == :epanechnikov
-end
+    compact = FDA.component(compact_graph.fpca, 1)
+    @test compact.settings.kernel isa FunctionalGraphicalModels.KernelSmoothing.EpanechnikovKernel
+    @test compact.eigenvalues[1] ≈ 1 atol=1e-8
+    @test compact.scores ≈ node.scores atol=1e-7
 
-@testset "Sparse local-plane covariance weighted least-squares oracle" begin
-    # Each subject contributes all ordered off-diagonal products. Different
-    # observation counts make equal-subject weighting differ from equal-pair
-    # weighting. The oracle uses a rectangular QR least-squares solve instead
-    # of the implementation's accumulated 3-by-3 normal equations.
-    schedules = [[0.0,0.2],[0.15,0.55,0.9],[0.05,0.35,0.7,1.0]]
-    centered = [[2.0,-1.0],[0.3,1.7,-0.4],[-1.2,0.5,2.0,0.7]]
-    firsttime,secondtime,products,pairweights = Float64[],Float64[],Float64[],Float64[]
-    for i in eachindex(schedules)
-        count = length(schedules[i])
-        for a in 1:count, b in 1:count
-            a == b && continue
-            push!(firsttime,schedules[i][a]); push!(secondtime,schedules[i][b])
-            push!(products,centered[i][a]*centered[i][b])
-            push!(pairweights,1/(length(schedules)*count*(count-1)))
-        end
+    # Each noise value must reach the corresponding FDA node without changing
+    # subject order. Independent errors shrink its conditional scores more.
+    two_nodes = FDA.MultivariateFunctionalData([
+        FDA.component(data, 1), FDA.component(data, 1)])
+    multinoise = fit_doubly(two_nodes;lambda=0.1,grid=grid,bandwidth=0.3,
+        ncomponents=1,noise_variance=[0.04,0.08])
+    @test FDA.component(multinoise.fpca, 1).noise_variance == 0.04
+    @test FDA.component(multinoise.fpca, 2).noise_variance == 0.08
+    for i in 1:n
+        count = length(times[i,1])
+        @test FDA.scores(multinoise.fpca, 2)[i,1] ≈ count/(count+0.08)*scores[i] atol=1e-7
     end
-    @test length(products) == 2+6+12
-    @test sum(pairweights) ≈ 1
-    u,v,h = 0.45,0.6,1.1
-    x,y = (firsttime.-u)./h,(secondtime.-v)./h
-    design = hcat(ones(length(products)),x,y)
-    for kernel in (:gaussian,:epanechnikov)
-        # Normalized kernels include their constants and 1/h factors here.
-        # Those constants cancel, as required by the local fit.
-        kernelvalue(z) = kernel == :gaussian ? exp(-z*z/2)/(sqrt(2pi)*h) :
-            0.75*max(1-z*z,0)/h
-        kernelweights = kernelvalue.(x).*kernelvalue.(y)
-        weights = pairweights.*kernelweights
-        oracle = (sqrt.(weights).*design) \ (sqrt.(weights).*products)
-        estimate = FunctionalGraphicalModels._dfgm_local_surface(firsttime,
-            secondtime,products,pairweights,u,v,h,kernel)
-        @test estimate ≈ oracle[1] atol=1e-11
-        equal_pair_oracle = (sqrt.(kernelweights).*design) \
-            (sqrt.(kernelweights).*products)
-        @test abs(estimate-equal_pair_oracle[1]) > 1e-3
+    for invalid_noise in ([-0.1,0.04], [NaN,0.04], [nothing,0.04], [:bad,0.04], "bad")
+        @test_throws ArgumentError fit_doubly(two_nodes;lambda=0.1,
+            grid=grid,bandwidth=0.3,ncomponents=1,noise_variance=invalid_noise)
     end
-    @test FunctionalGraphicalModels._dfgm_kernel(1.1,:epanechnikov) == 0
-    @test FunctionalGraphicalModels._dfgm_kernel(1.1,:gaussian) > 0
+    @test_throws DimensionMismatch fit_doubly(two_nodes;lambda=0.1,
+        grid=grid,bandwidth=0.3,ncomponents=1,noise_variance=[0.04])
 end
 
 @testset "Sparse BLUP uses covariance modes beyond retained scores" begin
@@ -136,8 +136,11 @@ end
     end
     grid = collect(range(0,1;length=17))
     noise = 0.05
-    fit = fit_sparse_fpca(SparseFunctionalData(times,values);grid=grid,
-        ncomponents=1,bandwidth=0.2,noise_variance=noise)
+    data = FDA.MultivariateFunctionalData([
+        FDA.IrregularFunctionalData(times[:,1], values[:,1])])
+    graph = fit_doubly(data;lambda=0.1,grid=grid,ncomponents=1,
+        bandwidth=0.2,noise_variance=noise)
+    fit = FDA.component(graph.fpca, 1)
     # H independently represents linear interpolation on the evaluation grid.
     H = zeros(length(schedule),length(grid))
     for (a,t) in enumerate(schedule)
@@ -145,21 +148,44 @@ end
         fraction = (t-grid[k])/(grid[k+1]-grid[k])
         H[a,k],H[a,k+1] = 1-fraction,fraction
     end
-    covariance = fit.covariances[:,:,1]
+    covariance = fit.settings.full_projected_covariance
     w = fit.weights
     @test count(>(1e-8),eigvals(Symmetric(sqrt.(w).*covariance.*transpose(sqrt.(w))))) >= 2
     full_observation_covariance = H*covariance*H' + noise*I
-    retained_function = H*fit.eigenfunctions[:,1,1]
-    retained_variance = fit.eigenvalues[1,1]
+    retained_function = H*fit.basis.values[:,1]
+    retained_variance = fit.eigenvalues[1]
     score_observation_covariance = retained_variance.*retained_function
     truncated_observation_covariance = retained_variance.*
         (retained_function*retained_function') + noise*I
     wrong_scores = zeros(n)
     for i in 1:n
-        centered = values[i,1]-H*fit.mean[1,:]
+        centered = values[i,1]-H*vec(fit.mean.values)
         expected = dot(score_observation_covariance,full_observation_covariance\centered)
         wrong_scores[i] = dot(score_observation_covariance,truncated_observation_covariance\centered)
-        @test fit.scores[i,1,1] ≈ expected atol=1e-8
+        @test fit.scores[i,1] ≈ expected atol=1e-8
     end
-    @test norm(fit.scores[:,1,1]-wrong_scores) > 1e-3
+    @test norm(fit.scores[:,1]-wrong_scores) > 1e-3
+
+    # Adopt FDA's raw-surface, middle-half noise integral (author decision,
+    # 2026-10-24). The old PSD-diagonal average was 0.09556629502099738;
+    # integrating that PSD excess gives 0.09729427575077355 instead.
+    estimated_graph = fit_doubly(data; lambda=0.1, grid=grid,
+        ncomponents=1, bandwidth=0.2)
+    estimated = FDA.component(estimated_graph.fpca, 1)
+    @test estimated.noise_variance ≈ 0.11159325235704108 rtol=1e-10
+    @test estimated.settings.noise_variance_source == :estimated
+    raw = estimated.settings.covariance_input
+    middle = findall(t -> 0.25 <= t <= 0.75, grid)
+    excess = raw.noise_details.diagonal[middle] - diag(raw.surface)[middle]
+    integrated = dot(FDA.quadrature_weights(grid[middle]), excess) / 0.5
+    @test estimated.noise_variance ≈ integrated rtol=1e-12
+    # The adopted estimate must also reach the conditional-score solve.
+    observation_covariance = H*estimated.settings.full_projected_covariance*H' +
+        estimated.noise_variance*I
+    crosscovariance = estimated.eigenvalues[1] .* (H*estimated.basis.values[:,1])
+    for i in 1:n
+        centered = values[i,1] - H*vec(estimated.mean.values)
+        expected = dot(crosscovariance, observation_covariance\centered)
+        @test estimated.scores[i,1] ≈ expected rtol=1e-10 atol=1e-12
+    end
 end

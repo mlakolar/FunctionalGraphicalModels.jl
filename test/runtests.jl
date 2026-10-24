@@ -3,6 +3,7 @@ using LinearAlgebra
 using Random
 using Test
 using Aqua
+import FunctionalDataAnalysis as FDA
 
 @testset "FunctionalGraphicalModels" begin
     include("data.jl")

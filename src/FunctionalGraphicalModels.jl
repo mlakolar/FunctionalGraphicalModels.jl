@@ -5,18 +5,19 @@ import CovarianceSelection
 import Random
 import BSplineKit
 import ProximalBase
+import FunctionalDataAnalysis as FDA
+import FunctionalDataAnalysis: quadrature_weights
+import KernelSmoothing
 
-export DenseFunctionalData, quadrature_weights, score_covariance, smooth_bspline,
-       FPCAResult, fit_fpca, transform_fpca, reconstruct,
+export quadrature_weights, score_covariance, smooth_bspline,
        functional_glasso, FGLassoResult, FGLassoDiagnostic,
        functional_neighborhood, neighborhood_lambda_max, select_neighborhood_scv,
        NeighborhoodResult, NeighborhoodDiagnostic, NeighborhoodSCVResult,
-       SparseFunctionalData, SparseFPCAFit, fit_sparse_fpca, DoublyFunctionalFit, fit_doubly,
+       DoublyFunctionalFit, fit_doubly,
        JointGraphicalLassoFit, joint_graphical_lasso, SeparableFit, fit_separable,
        simulate_qiao2019, graph_metrics, FGMComponentSelection, select_fgm_components
 
 include("data.jl")
-include("fpca.jl")
 include("tuning.jl")
 include("glasso.jl")
 include("neighborhood.jl")

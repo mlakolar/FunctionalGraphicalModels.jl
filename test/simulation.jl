@@ -2,7 +2,7 @@
     for model in (:ar2, :alternating, :random)
         sim = simulate_qiao2019(MersenneTwister(120); n=12, p=25, ncomponents=3,
                                 ntime=21, model, noise_sd=0)
-        @test size(sim.data.values) == (12, 25, 21)
+        @test size(FDA.to_array(sim.data)) == (12, 25, 21)
         @test size(sim.scores) == (12, 25, 3)
         @test size(sim.precision) == (75, 75)
         @test issymmetric(sim.precision)
@@ -19,12 +19,12 @@
                 @test sim.adjacency[j, k] == !iszero(block[1, 1])
             end
         end
-        t = sim.data.grid
+        t = FDA.component(sim.data, 1).grid
         basis = hcat(ones(length(t)), sqrt(2) .* sin.(2pi .* t), sqrt(2) .* cos.(2pi .* t))
-        @test sim.data.values[:, 1, :] ≈ sim.scores[:, 1, :] * transpose(basis)
+        @test FDA.to_array(sim.data)[:, 1, :] ≈ sim.scores[:, 1, :] * transpose(basis)
         repeated = simulate_qiao2019(MersenneTwister(120); n=12, p=25, ncomponents=3,
                                      ntime=21, model, noise_sd=0)
-        @test repeated.data.values == sim.data.values
+        @test FDA.to_array(repeated.data) == FDA.to_array(sim.data)
         @test repeated.precision == sim.precision
         if model == :ar2
             @test count(sim.adjacency) == 2 * (2 * 25 - 3)
@@ -43,7 +43,7 @@
     latent = simulate_qiao2019(MersenneTwister(4); n=2, p=2, ntime=10, noise_sd=0)
     noisy = simulate_qiao2019(MersenneTwister(4); n=2, p=2, ntime=10, noise_sd=0.5)
     @test latent.scores == noisy.scores
-    @test latent.data.values != noisy.data.values
+    @test FDA.to_array(latent.data) != FDA.to_array(noisy.data)
     @test latent.settings.paper_coefficient_dimension
     @test_throws ArgumentError simulate_qiao2019(MersenneTwister(1); model=:bad)
     @test_throws ArgumentError simulate_qiao2019(MersenneTwister(1); noise_sd=-1)

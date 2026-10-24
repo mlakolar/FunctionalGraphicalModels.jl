@@ -36,6 +36,8 @@ struct NeighborhoodResult
     diagnostics::Vector{NeighborhoodDiagnostic}
     score_means::Vector{Matrix{Float64}}
     target_bases::Union{Nothing,Array{Float64,3}}
+    fpca::Union{Nothing,FDA.MultivariateFPCA}
+    settings::NamedTuple
 end
 
 function _neighborhood_parameters(value, p, name)
@@ -167,7 +169,7 @@ function _neighborhood_group_lasso(X, Y, m, lambda;
 end
 
 function _neighborhood_assemble(coefficients, diagnostics, means, lambdas,
-                                thresholds, p, m, rule, target_bases)
+                                thresholds, p, m, rule, target_bases, fpca, settings)
     rule in (:and, :or) || throw(ArgumentError("rule must be :and or :or"))
     directed = falses(p,p)
     for j in 1:p
@@ -182,11 +184,12 @@ function _neighborhood_assemble(coefficients, diagnostics, means, lambdas,
     adjacency = rule == :and ? directed .& transpose(directed) :
                               directed .| transpose(directed)
     NeighborhoodResult(adjacency, directed, coefficients, lambdas, thresholds,
-                       diagnostics, means, target_bases)
+                       diagnostics, means, target_bases, fpca, settings)
 end
 
 function _functional_neighborhood(target_scores, lambdas, thresholds;
                                    rule=:or, center=true, target_bases=nothing,
+                                   fpca=nothing,
                                    kwargs...)
     _, p, m = _neighborhood_validate_scores(target_scores[1])
     rule in (:and, :or) || throw(ArgumentError("rule must be :and or :or"))
@@ -204,13 +207,15 @@ function _functional_neighborhood(target_scores, lambdas, thresholds;
         push!(means, mu)
     end
     _neighborhood_assemble(coefficients, diagnostics, means, lambdas, thresholds,
-                           p, m, rule, target_bases)
+                           p, m, rule, target_bases, fpca,
+                           merge((; rule, center, maxiter=10000, atol=1e-7,
+                               rtol=1e-6, rho=1.0), (; kwargs...)))
 end
 
 """
     functional_neighborhood(scores, lambda; threshold=0, rule=:or, center=true,
                             maxiter=10000, atol=1e-7, rtol=1e-6, rho=1)
-    functional_neighborhood(data::DenseFunctionalData, lambda; ncomponents, ...)
+    functional_neighborhood(data::FDA.MultivariateFunctionalData, lambda; ncomponents, ...)
 
 Estimate the graph with Zhao, Zhai, Wang and Kolar's EJS (2024) neighborhood
 selection. Scores have dimensions `n × p × M` and must use a common orthonormal
@@ -228,6 +233,11 @@ For dense curves, each target's marginal FPCA basis is estimated, and **all**
 nodes are projected onto that target's basis (Algorithm 1 and Section 2.4).
 This differs from regressing the separate marginal FPCA scores of each node.
 Tuning is user-supplied; see [`select_neighborhood_scv`](@ref) for Algorithm 2.
+The default OR rule and zero threshold retain FGM's graph convention;
+`center=true` centers scores. Solver defaults are FGM numerical controls.
+The dense route stores the FDA fit, including explicit `maxK=ncomponents`,
+the `n-1` eigenvalue convention and FDA's sign rule. `settings` stores all
+resolved graph and solver choices.
 
 Source: <https://arxiv.org/html/2105.02487v3#S2.SS3>.
 """
@@ -239,25 +249,27 @@ function functional_neighborhood(scores::AbstractArray{<:Real,3}, lambda;
     _functional_neighborhood(fill(scores,p),lambdas,thresholds; kwargs...)
 end
 
-function _neighborhood_target_scores(data::DenseFunctionalData, ncomponents)
-    fpca = fit_fpca(data; ncomponents, basis=:marginal)
-    n,p,t = size(data.values)
-    m = size(fpca.eigenfunctions,2)
+function _neighborhood_target_scores(data::FDA.MultivariateFunctionalData, ncomponents)
+    values, grid = _dense_parts(data)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:marginal)
+    n,p,t = size(values)
+    m = ncomponents
+    bases = cat((b.values for b in fpca.bases)...; dims=3)
     target_scores = [zeros(n,p,m) for _ in 1:p]
     for j in 1:p, k in 1:p, l in 1:m, i in 1:n
-        target_scores[j][i,k,l] = sum((data.values[i,k,s]-fpca.mean[k,s]) *
-            fpca.weights[s] * fpca.eigenfunctions[s,l,j] for s in 1:t)
+        target_scores[j][i,k,l] = sum((values[i,k,s]-fpca.means[k].values[1,s]) *
+            fpca.bases[j].weights[s] * bases[s,l,j] for s in 1:t)
     end
-    target_scores, Array{Float64,3}(fpca.eigenfunctions)
+    target_scores, Array{Float64,3}(bases), fpca
 end
 
-function functional_neighborhood(data::DenseFunctionalData, lambda;
+function functional_neighborhood(data::FDA.MultivariateFunctionalData, lambda;
                                   ncomponents, threshold=0.0, kwargs...)
-    target_scores, bases = _neighborhood_target_scores(data,ncomponents)
-    p = size(data.values,2)
+    target_scores, bases, fpca = _neighborhood_target_scores(data,ncomponents)
+    p = FDA.ncomponents(data)
     lambdas = _neighborhood_parameters(lambda,p,"lambda")
     thresholds = _neighborhood_parameters(threshold,p,"threshold")
-    _functional_neighborhood(target_scores,lambdas,thresholds; target_bases=bases,kwargs...)
+    _functional_neighborhood(target_scores,lambdas,thresholds; target_bases=bases,fpca,kwargs...)
 end
 
 """
@@ -319,7 +331,7 @@ end
 
 function _select_neighborhood_scv(target_scores, lambda_grid, threshold_grid;
                                    folds=5, fold_ids=nothing, rule=:or,
-                                   center=true, target_bases=nothing, kwargs...)
+                                   center=true, target_bases=nothing, fpca=nothing, kwargs...)
     n,p,m = _neighborhood_validate_scores(target_scores[1])
     lambdas = Float64.(collect(lambda_grid))
     thresholds = Float64.(collect(threshold_grid))
@@ -377,14 +389,16 @@ function _select_neighborhood_scv(target_scores, lambda_grid, threshold_grid;
         push!(means,mu)
     end
     fit = _neighborhood_assemble(coefficients,diagnostics,means,selected_lambdas,
-                                 selected_thresholds,p,m,rule,target_bases)
+                                 selected_thresholds,p,m,rule,target_bases,fpca,
+                                 merge((; rule, center, maxiter=10000, atol=1e-7,
+                                     rtol=1e-6, rho=1.0), (; kwargs...)))
     NeighborhoodSCVResult(fit,criteria,lambdas,thresholds,fold_ids,candidate_converged)
 end
 
 """
     select_neighborhood_scv(scores, lambda_grid, threshold_grid; folds=5,
                             fold_ids=nothing, rule=:or, kwargs...)
-    select_neighborhood_scv(data::DenseFunctionalData, lambda_grid, threshold_grid;
+    select_neighborhood_scv(data::FDA.MultivariateFunctionalData, lambda_grid, threshold_grid;
                             ncomponents, kwargs...)
 
 Select target-specific `(lambda, threshold)` pairs by EJS (2024), Algorithm 2.
@@ -408,10 +422,15 @@ function select_neighborhood_scv(scores::AbstractArray{<:Real,3},lambda_grid,
     _select_neighborhood_scv(fill(scores,p),lambda_grid,threshold_grid; kwargs...)
 end
 
-function select_neighborhood_scv(data::DenseFunctionalData,lambda_grid,
+function select_neighborhood_scv(data::FDA.MultivariateFunctionalData,lambda_grid,
                                   threshold_grid; ncomponents,kwargs...)
-    target_scores,bases = _neighborhood_target_scores(data,ncomponents)
+    target_scores,bases,fpca = _neighborhood_target_scores(data,ncomponents)
     _select_neighborhood_scv(target_scores,lambda_grid,threshold_grid;
-                             target_bases=bases,kwargs...)
+                             target_bases=bases,fpca,kwargs...)
+end
+
+function Base.show(io::IO, fit::NeighborhoodResult)
+    print(io, "NeighborhoodResult(lambdas=", fit.lambdas, ", thresholds=",
+        fit.thresholds, ", settings=", fit.settings, ", fpca=", fit.fpca, ")")
 end
 

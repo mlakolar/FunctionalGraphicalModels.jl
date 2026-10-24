@@ -20,7 +20,8 @@ struct FGLassoResult
     block_sizes::Vector{Int}
     adjacency::BitMatrix
     diagnostics::FGLassoDiagnostic
-    fpca::Union{Nothing,FPCAResult}
+    fpca::Union{Nothing,FDA.MultivariateFPCA}
+    settings::NamedTuple
 end
 
 function _fgm_blocks(d, sizes)
@@ -76,6 +77,13 @@ Nonconvergence is recorded and warned about. The returned positive-definite
 iterate and sparse consensus are separate because finite ADMM tolerance does
 not make them identical. This solves the paper's objective with a different
 numerical algorithm from its block coordinate descent.
+
+Solver defaults retain FGM's ADMM accuracy and iteration choices; they are
+numerical controls, rather than defaults from the paper. Dense inputs are
+complete FDA multivariate grid data. FDA's marginal FPCA uses trapezoidal
+quadrature, `n-1` eigenvalues, and its mean-alignment sign rule. Explicit
+`maxK=ncomponents` preserves the requested FGM truncation. All resolved FPCA
+and graph tuning choices are stored on the result and shown by `show`.
 """
 function functional_glasso(S::AbstractMatrix{<:Real}, block_sizes, lambda::Real;
                            rho::Real=1, maxiter::Integer=10000,
@@ -147,16 +155,26 @@ function functional_glasso(S::AbstractMatrix{<:Real}, block_sizes, lambda::Real;
     obj = dot(C,X) - logdet(Symmetric(X)) + lambda*_fgm_penalty(X,blocks)
     info = FGLassoDiagnostic(iter, converged, primal, dual, kkt, obj)
     converged || @warn "functional_glasso did not converge" iterations=iter primal dual
-    FGLassoResult(X,Z,C,bs,_fgm_graph(Z,blocks,threshold),info,nothing)
+    settings = (; lambda=Float64(lambda), rho=Float64(rho), maxiter=Int(maxiter),
+        abstol=Float64(abstol), reltol=Float64(reltol), threshold=Float64(threshold),
+        block_sizes=copy(bs))
+    FGLassoResult(X,Z,C,bs,_fgm_graph(Z,blocks,threshold),info,nothing,settings)
 end
 
 function functional_glasso(scores::AbstractArray{<:Real,3}, lambda::Real; kwargs...)
     functional_glasso(score_covariance(scores), size(scores,3), lambda; kwargs...)
 end
 
-function functional_glasso(data::DenseFunctionalData, lambda::Real; ncomponents::Integer, kwargs...)
-    fpca = fit_fpca(data; ncomponents)
-    fit = functional_glasso(fpca.scores, lambda; kwargs...)
+function functional_glasso(data::FDA.MultivariateFunctionalData, lambda::Real;
+                           ncomponents::Integer, kwargs...)
+    _dense_parts(data)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:marginal)
+    fit = functional_glasso(FDA.score_array(fpca), lambda; kwargs...)
     FGLassoResult(fit.precision,fit.sparse_precision,fit.covariance,fit.block_sizes,
-                 fit.adjacency,fit.diagnostics,fpca)
+                 fit.adjacency,fit.diagnostics,fpca,fit.settings)
+end
+
+function Base.show(io::IO, fit::FGLassoResult)
+    print(io, "FGLassoResult(settings=", fit.settings, ", diagnostics=",
+        fit.diagnostics, ", fpca=", fit.fpca, ")")
 end

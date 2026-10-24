@@ -89,7 +89,7 @@ function simulate_qiao2019(rng::Random.AbstractRNG; n::Integer=100, p::Integer=5
                  paper_coefficient_dimension=ncomponents == 5,
                  source="https://personal.lse.ac.uk/qiaox/qiao.links/research_papers/2017_FGM.pdf",
                  section="5.1", reproduction_status=:generating_design)
-    (; data=DenseFunctionalData(values, grid), scores, precision, adjacency, settings)
+    (; data=_dense_data(values, grid), scores, precision, adjacency, settings)
 end
 
 """

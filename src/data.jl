@@ -1,46 +1,20 @@
-"""
-    quadrature_weights(grid)
-
-Trapezoidal integration weights on a finite, strictly increasing grid.
-The weights sum to `last(grid) - first(grid)`.
-"""
-function quadrature_weights(grid::AbstractVector{<:Real})
-    length(grid) >= 2 || throw(ArgumentError("the grid needs at least two points"))
-    all(isfinite, grid) || throw(ArgumentError("the grid must be finite"))
-    all(>(0), diff(grid)) || throw(ArgumentError("the grid must be strictly increasing"))
-    x = float.(collect(grid))
-    w = similar(x)
-    w[1] = (x[2] - x[1]) / 2
-    w[end] = (x[end] - x[end - 1]) / 2
-    for t in 2:length(x)-1
-        w[t] = (x[t + 1] - x[t - 1]) / 2
-    end
-    w
-end
-
-"""
-    DenseFunctionalData(values, grid)
-
-Multivariate curves observed on a common grid. `values[i,j,t]` is the
-measurement for subject `i`, node `j`, and grid point `t`. Inputs are copied.
-Missing values and irregular subject-specific grids require preprocessing.
-"""
-struct DenseFunctionalData{T<:AbstractFloat}
-    values::Array{T,3}
-    grid::Vector{T}
-    DenseFunctionalData{T}(values::Array{T,3}, grid::Vector{T}) where {T<:AbstractFloat} =
-        new{T}(values, grid)
-end
-
-function DenseFunctionalData(values::AbstractArray{<:Real,3}, grid::AbstractVector{<:Real})
-    Base.require_one_based_indexing(values, grid)
-    n, p, nt = size(values)
-    n >= 1 && p >= 1 || throw(ArgumentError("at least one subject and node are required"))
-    nt == length(grid) || throw(DimensionMismatch("the last data dimension must match the grid"))
+# FGM's graph and P-spline routines require complete common-grid observations.
+# FDA owns the input representation, validation, copying and quadrature rule.
+function _dense_parts(data::FDA.MultivariateFunctionalData)
+    values = FDA.to_array(data)
+    grid = copy((FDA.component(data, 1)::FDA.GridFunctionalData).grid)
     quadrature_weights(grid)
     all(isfinite, values) || throw(ArgumentError("curve values must be finite"))
-    T = float(promote_type(eltype(values), eltype(grid)))
-    DenseFunctionalData{T}(Array{T,3}(values), Vector{T}(grid))
+    values, grid
+end
+
+function _dense_data(values::AbstractArray{<:Real,3}, grid::AbstractVector{<:Real};
+                     ids=nothing, metadata::NamedTuple=(;))
+    Base.require_one_based_indexing(values, grid)
+    size(values, 2) >= 1 || throw(ArgumentError("at least one node is required"))
+    FDA.MultivariateFunctionalData([
+        FDA.GridFunctionalData(values[:, j, :], grid; ids, metadata)
+        for j in axes(values, 2)])
 end
 
 """
@@ -86,16 +60,23 @@ Smooth each common-grid curve in a basis of `nbasis` B-splines of the given
 `degree`, with equally spaced knots on the grid interval (BSplineKit.jl). Fits
 minimize weighted squared error plus `penalty` times the squared second
 differences of the basis coefficients. This is dense-curve smoothing, not
-sparse-data PACE.
+sparse-data PACE. The input and output are FDA `MultivariateFunctionalData`
+with complete `GridFunctionalData` nodes on one common grid. Smoothing settings
+are stored in each output node's `metadata`; subject IDs are retained.
+
+The defaults `degree=3` and `penalty=0` retain FGM's cubic, unpenalized
+P-spline convention. The second-difference penalty is distinct from FDA's
+derivative-penalized spline smoother.
 """
-function smooth_bspline(data::DenseFunctionalData; nbasis::Integer,
+function smooth_bspline(data::FDA.MultivariateFunctionalData; nbasis::Integer,
                         degree::Integer=3, penalty::Real=0)
+    values, grid = _dense_parts(data)
     degree >= 0 || throw(ArgumentError("degree must be nonnegative"))
     nbasis >= degree + 1 || throw(ArgumentError("nbasis must be at least degree + 1"))
-    nbasis <= length(data.grid) || throw(ArgumentError("nbasis cannot exceed the number of grid points"))
+    nbasis <= length(grid) || throw(ArgumentError("nbasis cannot exceed the number of grid points"))
     isfinite(penalty) && penalty >= 0 || throw(ArgumentError("penalty must be finite and nonnegative"))
-    B = _bspline_design(data.grid, nbasis, degree)
-    w = quadrature_weights(data.grid)
+    B = _bspline_design(grid, nbasis, degree)
+    w = quadrature_weights(grid)
     WB = w .* B
     A = transpose(B) * WB
     if penalty > 0 && nbasis > 2
@@ -103,11 +84,13 @@ function smooth_bspline(data::DenseFunctionalData; nbasis::Integer,
         A .+= penalty .* (transpose(D) * D)
     end
     F = cholesky(Symmetric(A))
-    n, p, nt = size(data.values)
-    out = similar(data.values)
+    n, p, nt = size(values)
+    out = similar(values)
     for j in 1:p, i in 1:n
-        c = F \ (transpose(WB) * view(data.values, i, j, :))
+        c = F \ (transpose(WB) * view(values, i, j, :))
         out[i, j, :] .= B * c
     end
-    DenseFunctionalData(out, data.grid)
+    metadata = (; method=:pspline, nbasis=Int(nbasis), degree=Int(degree),
+        penalty, penalty_order=2, weighting=:trapezoidal, grid=copy(grid))
+    _dense_data(out, grid; ids=FDA.ids(data), metadata)
 end

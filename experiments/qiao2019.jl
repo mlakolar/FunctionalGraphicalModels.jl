@@ -6,6 +6,7 @@
 # complete competitor comparison, even when --paper is selected.
 
 using FunctionalGraphicalModels
+import FunctionalDataAnalysis as FDA
 using LinearAlgebra
 using Random
 using TOML
@@ -101,9 +102,11 @@ csvcell(x) = string('"', replace(string(x), '"' => "\"\"", '\n' => ' ', '\r' => 
 csvrow(io, xs...) = (println(io, join(csvcell.(xs), ',')); flush(io))
 
 function penalty_bounds(data, fpca)
-    n, p, nt = size(data.values)
-    m = size(fpca.scores, 3)
-    S = score_covariance(fpca.scores)
+    values = FDA.to_array(data)
+    scores = FDA.score_array(fpca)
+    n, p, nt = size(values)
+    m = size(scores, 3)
+    S = score_covariance(scores)
     glasso_bound = maximum(norm(view(S, (j-1)*m+1:j*m, (k-1)*m+1:k*m))
                            for j in 1:p for k in j+1:p)
     # EJS requires projecting every predictor onto the target's common basis.
@@ -111,9 +114,10 @@ function penalty_bounds(data, fpca)
     target_scores = zeros(n, p, m)
     neighborhood_bound = 0.0
     for target in 1:p
-        projection = fpca.weights .* fpca.eigenfunctions[:, :, target]
+        basis = fpca.bases[target]
+        projection = basis.weights .* basis.values
         for node in 1:p
-            centered = data.values[:, node, :] .- transpose(fpca.mean[node, :])
+            centered = values[:, node, :] .- fpca.means[node].values
             target_scores[:, node, :] .= centered * projection
         end
         neighborhood_bound = max(neighborhood_bound,
@@ -201,7 +205,8 @@ function run_experiment(opts, arguments)
                 sim = simulate_qiao2019(MersenneTwister(seed); n=opts["n"], p=opts["p"],
                     ncomponents=5, ntime=opts["ntime"], model, noise_sd=0.5)
                 smoothed = smooth_bspline(sim.data; nbasis=opts["nbasis"])
-                fpca = fit_fpca(smoothed; ncomponents=opts["components"])
+                fpca = FDA.fit(FDA.FPCA,smoothed; method=:dense,basis=:marginal,
+                    ncomponents=opts["components"],maxK=opts["components"])
                 bounds = penalty_bounds(smoothed, fpca)
                 empty_graph = falses(opts["p"], opts["p"])
                 complete_graph = trues(opts["p"], opts["p"])
@@ -231,7 +236,7 @@ function run_experiment(opts, arguments)
                 for (index, lambda) in enumerate(lambdas)
                     try
                         if method == :fglasso
-                            fit = functional_glasso(fpca.scores, lambda;
+                            fit = functional_glasso(FDA.score_array(fpca), lambda;
                                 maxiter=opts["maxiter"], threshold=opts["threshold"])
                             d = fit.diagnostics
                             converged, kkt, primal, dual, iterations = d.converged,

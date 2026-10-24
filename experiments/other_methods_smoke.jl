@@ -1,5 +1,6 @@
 # A seeded integration experiment, not a published simulation design.
 using FunctionalGraphicalModels, LinearAlgebra, Random, TOML
+import FunctionalDataAnalysis as FDA
 
 function main(args=ARGS)
     length(args) == 1 || error("usage: julia --project experiments/other_methods_smoke.jl NEW_OUTPUT_DIRECTORY")
@@ -22,7 +23,8 @@ function main(args=ARGS)
     for t in 1:q
         values[:,:,t] .= a .+ phi(grid[t]).*b
     end
-    data = DenseFunctionalData(values,grid)
+    data = FDA.MultivariateFunctionalData([
+        FDA.GridFunctionalData(values[:,j,:],grid) for j in 1:p])
     ps = fit_separable(data; lambda=0.1,alpha=0.5,ncomponents=m)
     ps.diagnostics.converged || error("partial-separability solver did not converge")
     dense = fit_doubly(data;lambda=0.1,ncomponents=m)
@@ -32,7 +34,9 @@ function main(args=ARGS)
         times[i,j] = sort!(rand(rng,6+mod(i+j,4)))
         observed[i,j] = a[i,j] .+ b[i,j].*phi.(times[i,j]) .+ 0.1.*randn(rng,length(times[i,j]))
     end
-    sparse = fit_doubly(SparseFunctionalData(times,observed);lambda=0.1,
+    irregular = FDA.MultivariateFunctionalData([
+        FDA.IrregularFunctionalData(times[:,j],observed[:,j];domain=(0.0,1.0)) for j in 1:p])
+    sparse = fit_doubly(irregular;lambda=0.1,
                        grid,bandwidth=0.25,ncomponents=m,noise_variance=0.01)
     all(isfinite,sparse.precisions) || error("nonfinite sparse DFGM output")
     open(joinpath(out,"metrics.csv"),"w") do io

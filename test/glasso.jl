@@ -44,3 +44,18 @@
     @test f1.adjacency == f2.adjacency
     @test f2.precision ≈ R*f1.precision*R' atol=1e-5
 end
+
+@testset "FDA dense graphical lasso integration" begin
+    sim = simulate_qiao2019(MersenneTwister(46); n=40, p=3, ncomponents=2,
+                            ntime=15, noise_sd=0)
+    fit = functional_glasso(sim.data, 0.1; ncomponents=2)
+    scores = FDA.score_array(fit.fpca)
+    direct = functional_glasso(scores, 0.1)
+    @test fit.precision ≈ direct.precision atol=1e-10
+    @test fit.covariance ≈ score_covariance(scores) atol=1e-12
+    @test fit.adjacency == direct.adjacency
+    @test fit.settings.lambda == 0.1
+    @test fit.settings.threshold == 1e-6
+    @test all(s -> s.maxK == 2, fit.fpca.settings.node_settings)
+    @test occursin("settings=", sprint(show, fit))
+end
