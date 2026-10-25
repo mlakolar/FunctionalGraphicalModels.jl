@@ -4,6 +4,7 @@ import FunctionalDataAnalysis as FDA
 import KernelSmoothing
 import CovarianceSelection
 include("dfgm_common.jl")
+include("dfgm_common_fast.jl")
 include("dfgm_factorized.jl")
 include("dfgm_cache.jl")
 
@@ -35,7 +36,7 @@ function sample_covariances(data,grid)
     S
 end
 
-function _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,indices,mode,bandwidth)
+function _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,indices,mode,bandwidth,common_covariance)
     n=FDA.nobs(data)
     cv_cache = Dict()
     for j in indices
@@ -44,9 +45,11 @@ function _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,indices,mo
         # This is the literal whole-curve CV path. It can be expensive; pilot
         # mode fixes h and uses AIC for rank. Neither mode knows latent truth.
         fp = if all(fd[i][1]==fd[1][1] for i in 1:n)
-            meanfit = FDA.fit(FDA.SmoothedMean,fd;grid=workgrid,bandwidth=selector,
-                kernel=KernelSmoothing.GaussianKernel(),weighting=:subj)
-            covariance = _dfgm_common_covariance(fd,meanfit,workgrid;bandwidth=selector,cache=cv_cache)
+            meanfit = common_covariance===_dfgm_common_fast_covariance ?
+                _dfgm_common_fast_mean(fd,workgrid;bandwidth=selector,cache=cv_cache) :
+                FDA.fit(FDA.SmoothedMean,fd;grid=workgrid,bandwidth=selector,
+                    kernel=KernelSmoothing.GaussianKernel(),weighting=:subj)
+            covariance = common_covariance(fd,meanfit,workgrid;bandwidth=selector,cache=cv_cache)
             FDA.fit(FDA.FPCA,fd;method=:pace,grid=workgrid,ncomponents=FDA.AIC(),
                 maxK=5,mean=meanfit,covariance)
         else
@@ -62,16 +65,17 @@ function _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,indices,mo
     end
 end
 
-function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_points=31,ntasks=1)
+function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_points=31,ntasks=1,common_fast=false)
     1<=ntasks<=Threads.nthreads() || error("reconstruction ntasks exceeds Julia threads")
     n,p = FDA.nobs(data),FDA.ncomponents(data)
     workgrid = sort!(unique(vcat(collect(range(0,1;length=work_points)),grid)))
     X = zeros(n,p,length(grid)); selections=Vector{NamedTuple}(undef,p)
+    common_covariance=common_fast ? _dfgm_common_fast_covariance : _dfgm_common_covariance
     if ntasks==1
-        _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,1:p,mode,bandwidth)
+        _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,1:p,mode,bandwidth,common_covariance)
     else
         Threads.@threads for task in 1:ntasks
-            _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,task:ntasks:p,mode,bandwidth)
+            _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,task:ntasks:p,mode,bandwidth,common_covariance)
         end
     end
     S = zeros(p,p,length(grid))
@@ -132,7 +136,7 @@ end
 function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=0,
                 integration_points=101,nlambda=7,work_points=31,evaluation_points=0,
                 bias_constant=1.,bias_constants=nothing,lp_solver=:highs,
-                path_reuse=false,covariance_cache="",ntasks=1)
+                path_reuse=false,covariance_cache="",ntasks=1,common_fast=false)
     1<=ntasks<=Threads.nthreads() || error("worker ntasks exceeds Julia threads")
     mkpath(out)
     done = joinpath(out,"complete.toml")
@@ -200,6 +204,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "direct_selection"=>"pointwise BIC across bias/K2 menu; empirical when envelope not externally certified",
         "path_reuse"=>path_reuse,
         "threads_per_worker"=>ntasks,
+        "common_fast"=>common_fast,
         "restart_policy"=>"one fresh column solve after ALMOST_OPTIMAL; fixed pilot and unchanged tolerances; preserve original outcome",
         "direct_candidate_seconds"=>path_reuse ? "amortized equally within each shared bias/K2 path" : "independent cold fit",
         "expected_candidates"=>Dict(string(m)=>expected_candidates(m) for m in methods),
@@ -212,7 +217,8 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "source_sha256"=>Dict(f=>bytes2hex(sha256(read(joinpath(@__DIR__,"..",f))))
             for f in ("Project.toml","src/FunctionalGraphicalModels.jl","src/direct.jl",
                 "src/direct_path.jl","src/dfgm_simulation.jl","experiments/dfgm2020.jl",
-                "experiments/dfgm_common.jl","experiments/dfgm_factorized.jl","experiments/dfgm_cache.jl")))
+                "experiments/dfgm_common.jl","experiments/dfgm_common_fast.jl",
+                "experiments/dfgm_factorized.jl","experiments/dfgm_cache.jl")))
     manifest=joinpath(@__DIR__,"..","Manifest.toml")
     settings["dependency_manifest_sha256"]=isfile(manifest) ? bytes2hex(sha256(read(manifest))) : "not_saved"
     reused===nothing || (settings["covariance_cache"]=Dict(string(k)=>v for (k,v) in pairs(reused.receipt)))
@@ -232,7 +238,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     reconstruction_error = ""
     if reused===nothing
         try
-            Srecon,selections = reconstructed_covariances(sim.data,sim.grid;mode,work_points,ntasks)
+            Srecon,selections = reconstructed_covariances(sim.data,sim.grid;mode,work_points,ntasks,common_fast)
             serialize(joinpath(out,"fpca_selections.bin"),selections)
         catch e
             reconstruction_error = sprint(showerror,e,catch_backtrace())
@@ -432,6 +438,7 @@ if abspath(PROGRAM_FILE)==@__FILE__
         bias_constant=parse(Float64,option("bias-constant","1")),
         bias_constants=let value=option("bias-constants",""); isempty(value) ? nothing : parse.(Float64,split(value,',')); end,
         lp_solver=Symbol(option("lp-solver","highs")),path_reuse=option("path-reuse","0")=="1",
-        covariance_cache=option("covariance-cache",""),ntasks=parse(Int,option("ntasks","1")))
+        covariance_cache=option("covariance-cache",""),ntasks=parse(Int,option("ntasks","1")),
+        common_fast=option("common-fast","0")=="1")
     exit(ok ? 0 : 1)
 end

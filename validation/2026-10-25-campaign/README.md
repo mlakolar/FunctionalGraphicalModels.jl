@@ -83,3 +83,19 @@ The workspace registry `.slurm/runs/20261025-dfgm-paper.json` and submission
 journal identify exact live jobs. The full paper report still requires coverage,
 paired uncertainty, missingness, target reconciliation and source-identified
 reference-table comparisons. A scheduler exit alone is insufficient.
+
+## Common-grid computation update [EMPIRICAL]
+
+The [exact common-grid mean/CV and product-moment shortcut](../../docs/COMMON_GRID_COMPUTATION.md)
+passed full p=100 reconstruction and rank comparisons (job 13423276), then the
+101-fit end-to-end gate (13423280;100 accepted, 1 excluded conic failure). The
+complete reconstructed covariance matched the saved frozen result within
+2.80e-14; all 100 ranks matched. A representative mean CV component took 27.23 s
+versus 0.0612 s. These are bounded timing checks.
+
+All 125 waiting common-grid pools (500 datasets) were replaced with this validated
+implementation and shorter wall limits. Running jobs retained their source.
+[Receipts and CSV timings](common-fast/source-receipt.json) identify both source
+variants. Canonical dataset links and the aggregation dependency preserve all
+1,200 intended datasets. All four CI platforms passed on436c780 before this
+implementation update; inspect the latest commit's checks separately.

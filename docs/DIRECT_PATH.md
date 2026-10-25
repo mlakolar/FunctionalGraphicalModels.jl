@@ -84,3 +84,11 @@ They retain compatibility with the older locked FDA version and the same
 1e-10 agreement tolerance. A change in upstream defaults must not silently
 change an active numerical campaign. Current-default noise sensitivity is a
 separate source/protocol variant, not a replacement for retained results.
+
+## Shared-grid reconstruction
+
+The optional experiment flag `--common-fast 1` also reuses exact mean/CV and
+distinct-visit covariance sufficient statistics on common grids. See the
+[identities, restrictions and bounded numerical checks](COMMON_GRID_COMPUTATION.md).
+This preserves the legacy FDA noise convention and the existing precision
+objectives. The frozen reference helper remains available.

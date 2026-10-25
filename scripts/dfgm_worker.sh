@@ -6,6 +6,9 @@ out="$DFGM_OUTPUT_DIR/setting-$setting-rep-$replicate"
 mkdir -p "$out"
 printf 'job=%s step=%s\n' "$SLURM_JOB_ID" "$SLURM_STEP_ID" >"$out/step.txt"
 extra=()
+if [[ ${DFGM_COMMON_FAST:-0} == 1 ]]; then
+    extra+=(--common-fast 1)
+fi
 if [[ ${DFGM_PATH_REUSE:-0} == 1 ]]; then
     extra+=(--path-reuse 1)
 fi

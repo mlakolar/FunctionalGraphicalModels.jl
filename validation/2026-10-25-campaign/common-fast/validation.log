@@ -1,0 +1,6 @@
+Test Summary:                                           | Pass  Total  Time
+Exact common product geometry versus retained reference |   40     40  5.3s
+Test Summary:                      | Pass  Total  Time
+Full-size component and AIC scores |    4      4  4.3s
+Test Summary:                                    | Pass  Total   Time
+Full p100 reconstructed covariance and all ranks |    2      2  11.2s
