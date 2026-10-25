@@ -1,0 +1,6 @@
+{
+  "stress_fits": 28,
+  "calibration_fits": 24,
+  "fit_failures": 0,
+  "exact_default_replay": true
+}

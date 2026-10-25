@@ -16,6 +16,6 @@ ax.scatter(x,y,s=30,alpha=.8)
 ax.set(xscale="log",yscale="log",xlim=(lo,hi),ylim=(lo,hi),
     xlabel="Default scaled lasso: normalized squared Frobenius loss",
     ylabel="Held-out tuned scaled lasso: same loss",
-    title="Scaled-lasso calibration · 48 paired datasets\nSix candidate penalties; no latent truth used for selection")
+    title=f"Scaled-lasso calibration · {len(rows)} paired datasets\nSix candidate penalties; no latent truth used for selection")
 ax.grid(alpha=.2)
 for ext in ("png","svg"): fig.savefig(root/f"calibration.{ext}",dpi=180)

@@ -119,7 +119,7 @@ end
 
 function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=0,
                 integration_points=101,nlambda=7,work_points=31,evaluation_points=0,
-                bias_constant=1.,lp_solver=:highs)
+                bias_constant=1.,bias_constants=nothing,lp_solver=:highs)
     mkpath(out)
     done = joinpath(out,"complete.toml")
     (isfile(done)||isfile(joinpath(out,"settings.toml"))) &&
@@ -147,6 +147,10 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     # K2 is tuned on the same fixed menu for both proposals. It is not a theorem
     # constant in these exploratory paths. Fixed K1 controls the shared pilot.
     multipliers = exp.(range(log(.03),log(2.);length=nlambda))
+    bias_menu = bias_constants===nothing ? [Float64(bias_constant)] : Float64.(collect(bias_constants))
+    !isempty(bias_menu) && all(b->isfinite(b)&&b>0,bias_menu) && allunique(bias_menu) ||
+        error("bias constants must be distinct, positive and finite")
+    direct_candidates = [(;K2,bias_constant=b) for b in bias_menu for K2 in multipliers]
     hs = [.15,.25,.4]
     C = direct_covariance(sim.data,sim.grid;bandwidths=hs,
         design=setting.design===:common ? :stratified_synchronous : :independent,
@@ -159,7 +163,8 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         sqrt(2log(effective_p)/effective_n)*(1+1/(C.min_visits*hs[2]))]
     push!(methods,:scaled_lasso_tuned)
     expected_candidates(method) = method===:scaled_lasso ? 1 :
-        method===:scaled_lasso_tuned ? length(scaled_values) : nlambda
+        method===:scaled_lasso_tuned ? length(scaled_values) :
+        method in (:aclime,:l2_aclime) ? length(direct_candidates) : nlambda
     println("direct covariance ready seconds=$(time()-started)");flush(stdout)
     settings = Dict("setting_index"=>setting_index,"replicate"=>replicate,"seed"=>seed,
         "design"=>string(setting.design),"schedule"=>string(setting.schedule),
@@ -167,6 +172,9 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "integration_points"=>integration_points,"work_points"=>work_points,
         "evaluation_grid"=>sim.grid,"bandwidths"=>hs,"K1"=>2.,"K2_menu"=>multipliers,
         "scalar_penalties"=>penalties,"bias_constant"=>bias_constant,"lp_solver"=>string(lp_solver),"threshold"=>THRESHOLD,
+        "bias_constant_menu"=>bias_menu,
+        "direct_selection"=>"pointwise BIC across bias/K2 menu; empirical when envelope not externally certified",
+        "expected_candidates"=>Dict(string(m)=>expected_candidates(m) for m in methods),
         "noise_variance"=>.5,"julia_version"=>string(VERSION),
         "scaled_lasso_penalty_menu"=>string.(scaled_values),
         "scaled_lasso_tuned_selection"=>"pointwise BIC; empirical menu, no iid-theory transfer",
@@ -210,20 +218,26 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
             Sdgm[:,:,t] .= sum(w[r].*Sraw[:,:,r] for r in eachindex(obsgrid))
         end
     end
+    # Expensive reconstruction inputs are reusable for later precision-only
+    # sensitivity analyses. Their source, subjects and seeds are in settings.
+    serialize(joinpath(out,"covariances.bin"),(;grid=sim.grid,direct=C,
+        reconstructed=Srecon,raw=Sraw,dynamic=Sdgm))
     open(joinpath(out,"fits.csv"),"w") do io
-        row(io,"method","candidate","penalty","status","seconds","pd_slices","max_constraint_violation","psd_displacement","error")
+        row(io,"method","candidate","penalty","bias_constant","status","seconds","pd_slices","max_constraint_violation","psd_displacement","error")
         for method in methods
             println("starting $method seconds=$(time()-started)");flush(stdout)
             for candidate in 1:expected_candidates(method)
                 tick = time()
                 scaled = method in (:scaled_lasso,:scaled_lasso_tuned)
-                value = method in (:aclime,:l2_aclime) ? multipliers[candidate] :
+                direct_parameter = method in (:aclime,:l2_aclime) ? direct_candidates[candidate] : nothing
+                bvalue = direct_parameter===nothing ? bias_constant : direct_parameter.bias_constant
+                value = direct_parameter!==nothing ? direct_parameter.K2 :
                     scaled ? scaled_values[candidate] : penalties[candidate]
                 try
                     violation,displacement = 0.,0.
                     P = if method in (:aclime,:l2_aclime,:scaled_lasso,:scaled_lasso_tuned)
                         f = fit_direct(C;method=scaled ? :scaled_lasso : method,
-                            pilot_index=2,bias_constant,K2=scaled ? 1. : value,
+                            pilot_index=2,bias_constant=bvalue,K2=scaled ? 1. : value,
                             lambda0=scaled ? value : :quantile,noise_variance=.5,lp_solver)
                         violation = maximum(d.max_constraint_violation for d in f.diagnostics)
                         displacement = maximum(d.covariance_psd_displacement for d in f.diagnostics)
@@ -245,11 +259,11 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
                         fit_scalar_path(S,kind,value)
                     end
                     pd = count(t->isposdef(Symmetric(P[:,:,t])),axes(P,3))
-                    row(io,method,candidate,value,"ok",time()-tick,pd,violation,displacement,"")
+                    row(io,method,candidate,value,bvalue,"ok",time()-tick,pd,violation,displacement,"")
                     push!(paths[method],(candidate,P))
                 catch e
                     failures += 1
-                    row(io,method,candidate,value,"failed",time()-tick,0,NaN,NaN,sprint(showerror,e))
+                    row(io,method,candidate,value,bvalue,"failed",time()-tick,0,NaN,NaN,sprint(showerror,e))
                 end
             end
         end
@@ -257,6 +271,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     # BIC is computed per time using each method's observed covariance. Direct
     # estimates can be indefinite: those BIC candidates receive Inf, never a
     # hidden SPD precision repair. Target losses are computed after selection.
+    selected_bias = Dict{Tuple{Symbol,Int},Float64}()
     open(joinpath(out,"metrics.csv"),"w") do io
         row(io,"method","target","time_index","candidate","bic","operator","frobenius","normalized_squared_frobenius","fpr","tpr","edges","nonedges")
         for method in methods
@@ -270,6 +285,9 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
                     logdet(Symmetric(P[:,:,t])))+log(effective_n)*count(>(THRESHOLD),abs.(P[:,:,t])) : Inf
                     for (_,P) in path]
                 best = argmin(bic)
+                if method in (:aclime,:l2_aclime) && isfinite(bic[best])
+                    selected_bias[method,t] = direct_candidates[path[best][1]].bias_constant
+                end
                 for (k,(candidate,P)) in enumerate(path), (target,truth) in
                         ((:actual,sim.precision),(:nominal,sim.nominal_precision))
                     loss = metrics(P[:,:,t:t],truth[:,:,t:t])
@@ -287,13 +305,23 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     # Keep precision paths for numerical re-evaluation and paired comparisons.
     serialize(joinpath(out,"paths.bin"),paths)
     open(joinpath(out,"auc.csv"),"w") do io
-        row(io,"method","target","time_index","observed_area","full_auc","minimum_fpr","maximum_fpr","successful_candidates","expected_candidates")
+        row(io,"method","target","time_index","observed_area","full_auc","minimum_fpr","maximum_fpr","successful_candidates","expected_candidates","selected_bias_constant")
         for method in methods,(target,truth) in ((:actual,sim.precision),(:nominal,sim.nominal_precision)),t in eachindex(sim.grid)
-            points = [rocpoint(P,truth,t)[1:2] for (_,P) in paths[method]]
+            path = paths[method]
             expected = expected_candidates(method)
+            chosen_bias = NaN
+            if method in (:aclime,:l2_aclime) && length(bias_menu)>1
+                # Fix the bias constant using observable BIC before computing
+                # the K2 ROC. Pooling all bias paths would use target TPR to
+                # form an optimistic envelope across an extra tuning dimension.
+                chosen_bias = get(selected_bias,(method,t),NaN)
+                path = [(k,P) for (k,P) in path if direct_candidates[k].bias_constant==chosen_bias]
+                expected = nlambda
+            end
+            points = [rocpoint(P,truth,t)[1:2] for (_,P) in path]
             area,full,lo,hi = observed_auc(points)
-            length(paths[method])==expected || (full=NaN)
-            row(io,method,target,t,area,full,lo,hi,length(paths[method]),expected)
+            length(path)==expected || (full=NaN)
+            row(io,method,target,t,area,full,lo,hi,length(path),expected,chosen_bias)
         end
     end
     open(done,"w") do io
@@ -315,6 +343,7 @@ if abspath(PROGRAM_FILE)==@__FILE__
         nlambda=parse(Int,option("nlambda","7")),work_points=parse(Int,option("work-points","31")),
         evaluation_points=parse(Int,option("evaluation-points","0")),
         bias_constant=parse(Float64,option("bias-constant","1")),
+        bias_constants=let value=option("bias-constants",""); isempty(value) ? nothing : parse.(Float64,split(value,',')); end,
         lp_solver=Symbol(option("lp-solver","highs")))
     exit(ok ? 0 : 1)
 end

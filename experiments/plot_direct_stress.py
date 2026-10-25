@@ -24,6 +24,8 @@ for ax, (curvature, noise) in zip(axes.flat, ((0, .5), (0, 2), (4, .5), (4, 2)))
 handles, labels = axes[0,0].get_legend_handles_labels()
 fig.legend(handles, labels, loc="outside lower center", ncol=3, frameon=False)
 fig.supylabel("Normalized squared Frobenius loss (log scale)", fontsize=11)
-fig.suptitle("Known-target controls · n=200, p=50\nThree paired replicates; bars show estimated Monte Carlo standard errors", fontsize=12)
+reps = sorted({int(r["valid_replicates"]) for r in rows})
+count_label = str(reps[0]) if len(reps) == 1 else "Variable numbers of"
+fig.suptitle(f"Known-target controls · n=200, p=50\n{count_label} paired replicates per setting; bars show Monte Carlo standard errors", fontsize=12)
 for extension in ("png", "svg"):
     fig.savefig(root / f"selected-losses.{extension}", dpi=180)

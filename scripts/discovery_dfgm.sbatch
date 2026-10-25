@@ -19,6 +19,13 @@ output_dir=${3:?output directory required}
 mkdir -p "$output_dir"
 cd "$source_dir"
 export DFGM_SOURCE_DIR="$source_dir" DFGM_OUTPUT_DIR="$output_dir"
+export DFGM_WORKER_MEM_MB=${DFGM_WORKER_MEM_MB:-1800}
+[[ $DFGM_WORKER_MEM_MB =~ ^[0-9]+$ ]] && (( DFGM_WORKER_MEM_MB > 0 )) || exit 2
+if [[ -n ${SLURM_MEM_PER_NODE:-} ]]; then
+    (( SLURM_NTASKS * DFGM_WORKER_MEM_MB <= SLURM_MEM_PER_NODE )) || {
+        echo 'Worker memory requests exceed allocation' >&2; exit 2;
+    }
+fi
 cp "$task_file" "$output_dir/tasks.tsv"
 if [[ ${DFGM_RUN_TESTS:-0} == 1 ]]; then
     /home1/mkolar/juliaPkg/julia-1.13.2/bin/julia --project \
@@ -32,7 +39,7 @@ fi
 worker_status=0
 parallel --colsep '\t' --jobs "$SLURM_NTASKS" --joblog "$output_dir/parallel.tsv" \
     --halt never \
-    'srun --exclusive --exact -N1 -n1 -c1 --mem=1800M bash scripts/dfgm_worker.sh {1} {2} {3} {4} {5} {6} {7} {8}' \
+    'srun --exclusive --exact -N1 -n1 -c1 --mem="${DFGM_WORKER_MEM_MB}M" bash scripts/dfgm_worker.sh {1} {2} {3} {4} {5} {6} {7} {8}' \
     :::: "$task_file" || worker_status=$?
 python3 experiments/summarize_dfgm.py "$output_dir"
 exit "$worker_status"

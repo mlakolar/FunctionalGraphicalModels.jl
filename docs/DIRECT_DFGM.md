@@ -328,6 +328,17 @@ the workspace's lightweight `.slurm/runs/` registry. No cleanup is automatic.
 See `validation/2026-10-25-direct/REPORT.md` for checks and results actually
 performed. Reduced canaries and one-replicate pilots are not paper replication.
 
+The expanded 100-replicate study follows [the prospective campaign protocol](CAMPAIGN_20261025.md).
+Its direct methods use `--bias-constants 0.01,0.1,1,10,20` (or the Slurm
+environment variable `DFGM_BIAS_CONSTANTS`) and jointly select the bias/K2
+pair by observed-data BIC. For ROC evaluation, the selected bias constant is
+fixed before varying K2, avoiding a truth-optimized envelope over bias paths.
+This remains empirical tuning, not certification of the selected envelope.
+`prepare_dfgm_campaign.py` renders an explicit full manifest and per-pool task
+tables without submitting jobs. `DFGM_WORKER_MEM_MB` sizes exclusive workers;
+the launcher rejects aggregate worker memory above the allocation. Expensive
+covariance inputs are retained in `covariances.bin` for later sensitivity work.
+
 ## Sources
 
 - Qiao, Qian, James and Guo (2020), *Doubly functional graphical models in high

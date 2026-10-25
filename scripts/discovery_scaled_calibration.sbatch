@@ -19,7 +19,7 @@ mkdir -p "$DFGM_OUTPUT_DIR"
 srun --exclusive --exact -N1 -n1 -c1 --mem=1800M \
   bash "$DFGM_SOURCE_DIR/scripts/scaled_calibration_worker.sh" 1
 worker_status=0
-parallel --jobs 2 --halt never --joblog "$DFGM_OUTPUT_DIR/parallel.tsv" \
+parallel --jobs "$SLURM_NTASKS" --halt never --joblog "$DFGM_OUTPUT_DIR/parallel.tsv" \
  'srun --exclusive --exact -N1 -n1 -c1 --mem=1800M bash "$DFGM_SOURCE_DIR/scripts/scaled_calibration_worker.sh" {}' \
  ::: {2..16} || worker_status=$?
 python3 "$DFGM_SOURCE_DIR/experiments/summarize_scaled_calibration.py" "$DFGM_OUTPUT_DIR" "${3:?original stress outputs required}"

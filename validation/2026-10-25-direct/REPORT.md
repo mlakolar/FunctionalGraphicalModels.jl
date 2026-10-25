@@ -5,6 +5,10 @@ Discovery Slurm allocations. **The published Biometrika tables have not been
 replicated.** This record separates software checks, exploratory results and
 remaining paper evidence.
 
+The user subsequently expanded compute authorization. Work now continues
+under [the full campaign protocol](../../docs/CAMPAIGN_20261025.md). This report
+retains the historical development results and their original coverage limits.
+
 ## Implemented and verified
 
 `direct_covariance` estimates pointwise covariance from raw observations.
@@ -222,8 +226,9 @@ all settings and repetitions; compare published quantities with Monte Carlo
 errors and retain failures. Matérn controls proposed in the protocol are not
 implemented or run.
 
-Execution uses the slurm-workflow standing allowance: at most eight concurrent
+The development runs above used the slurm-workflow standing allowance: at most eight concurrent
 CPUs, 16 GB and 7200 seconds with an allocation running, across attempts.
 Overlapping steps inside the pilot do not add allocation wall time. The larger
-campaign budget request awaits the user's response. No larger allowance is
-assumed. This draft remains incomplete as paper evidence.
+campaign budget was pending at that checkpoint. The user has since explicitly
+expanded compute authorization; current work follows the linked campaign
+protocol. This draft remains incomplete as paper evidence.
