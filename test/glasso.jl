@@ -56,6 +56,6 @@ end
     @test fit.adjacency == direct.adjacency
     @test fit.settings.lambda == 0.1
     @test fit.settings.threshold == 1e-6
-    @test all(s -> s.maxK == 2, fit.fpca.settings.node_settings)
+    @test all(s -> s.max_k == 2, fit.fpca.settings.node_settings)
     @test occursin("settings=", sprint(show, fit))
 end

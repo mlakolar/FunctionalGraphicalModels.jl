@@ -16,10 +16,10 @@ ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
-CovarianceSelection = {rev = "master", url = "https://github.com/mlakolar/CovarianceSelection.jl"}
-FunctionalDataAnalysis = {rev = "main", url = "https://github.com/mlakolar/FunctionalDataAnalysis.jl"}
-KernelSmoothing = {rev = "master", url = "https://github.com/mlakolar/KernelSmoothing.jl"}
-ProximalBase = {rev = "master", url = "https://github.com/mlakolar/ProximalBase.jl"}
+CovarianceSelection = {path = "../CovarianceSelection.jl"}
+FunctionalDataAnalysis = {path = "../FunctionalDataAnalysis.jl"}
+KernelSmoothing = {path = "../KernelSmoothing.jl"}
+ProximalBase = {path = "../ProximalBase.jl"}
 
 [compat]
 Clarabel = "0.11"

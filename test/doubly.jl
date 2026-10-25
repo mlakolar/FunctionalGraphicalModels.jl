@@ -69,7 +69,7 @@ end
     @test node.settings.diagonal_bandwidth == 0.3
     @test node.settings.weighting == :subj
     @test node.settings.binning === nothing
-    @test node.settings.maxK == length(grid)
+    @test node.settings.max_k == length(grid)
     @test node.settings.eigen_tol == 100eps(Float64)
     @test node.eigenvalues[1] ≈ 1 atol=1e-8
     @test node.basis.values[:,1] ≈ ones(9) atol=1e-8
@@ -166,19 +166,21 @@ end
     end
     @test norm(fit.scores[:,1]-wrong_scores) > 1e-3
 
-    # Adopt FDA's raw-surface, middle-half noise integral (author decision,
-    # 2026-10-24). The old PSD-diagonal average was 0.09556629502099738;
-    # integrating that PSD excess gives 0.09729427575077355 instead.
+    # Estimated noise follows FDA's default estimator: the rotated diagonal
+    # (Yao, Mueller and Wang 2005, which the DFGM paper cites) integrated over
+    # the full interval, chosen by the FDA issue #17 benchmark (2026-10-25).
+    # Earlier values on this fixture: PSD-diagonal average 0.09556629502099738,
+    # surface diagonal over the middle half 0.11159325235704108. The curves are
+    # noise-free, so the new estimate (0.031) is also the closest to zero.
     estimated_graph = fit_doubly(data; lambda=0.1, grid=grid,
         ncomponents=1, bandwidth=0.2)
     estimated = FDA.component(estimated_graph.fpca, 1)
-    @test estimated.noise_variance ≈ 0.11159325235704108 rtol=1e-10
+    @test estimated.noise_variance ≈ 0.030864993605722504 rtol=1e-10
     @test estimated.settings.noise_variance_source == :estimated
     raw = estimated.settings.covariance_input
-    middle = findall(t -> 0.25 <= t <= 0.75, grid)
-    excess = raw.noise_details.diagonal[middle] - diag(raw.surface)[middle]
-    integrated = dot(FDA.quadrature_weights(grid[middle]), excess) / 0.5
-    @test estimated.noise_variance ≈ integrated rtol=1e-12
+    @test raw.noise_details.noise_method == :rotated
+    @test raw.noise_details.noise_interval == :full
+    @test estimated.noise_variance ≈ raw.noise_variance rtol=1e-12
     # The adopted estimate must also reach the conditional-score solve.
     observation_covariance = H*estimated.settings.full_projected_covariance*H' +
         estimated.noise_variance*I

@@ -104,7 +104,7 @@ function fit_doubly(data::FDA.MultivariateFunctionalData; lambda,
                 "grid, bandwidth, noise_variance and nondefault kernel require irregular nodes for fit_doubly"))
         _dense_parts(data)
         fpca = FDA.fit(FDA.FPCA, data; basis=:marginal,
-            ncomponents=ncomponents, maxK=ncomponents, method=:dense)
+            ncomponents=ncomponents, max_k=ncomponents, method=:dense)
         return _fit_doubly(fpca; lambda, threshold, method=:dense_reconstruction)
     end
     all(c -> c isa FDA.IrregularFunctionalData, data.components) ||
@@ -149,7 +149,7 @@ function fit_doubly(data::FDA.MultivariateFunctionalData; lambda,
     smoothing_kernel = kernel === :gaussian ? KernelSmoothing.GaussianKernel() :
         KernelSmoothing.EpanechnikovKernel()
     fpca = FDA.fit(FDA.FPCA, data; basis=:marginal, method=:pace,
-        grid=g, ncomponents=ncomponents, maxK=length(g),
+        grid=g, ncomponents=ncomponents, max_k=length(g),
         mean_bandwidth=bandwidth, covariance_bandwidth=bandwidth,
         diagonal_bandwidth=bandwidth, kernel=smoothing_kernel,
         weighting=:subj, binning=nothing, noise_variance=noise,

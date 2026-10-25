@@ -82,7 +82,7 @@ Solver defaults retain FGM's ADMM accuracy and iteration choices; they are
 numerical controls, rather than defaults from the paper. Dense inputs are
 complete FDA multivariate grid data. FDA's marginal FPCA uses trapezoidal
 quadrature, `n-1` eigenvalues, and its mean-alignment sign rule. Explicit
-`maxK=ncomponents` preserves the requested FGM truncation. All resolved FPCA
+`max_k=ncomponents` preserves the requested FGM truncation. All resolved FPCA
 and graph tuning choices are stored on the result and shown by `show`.
 """
 function functional_glasso(S::AbstractMatrix{<:Real}, block_sizes, lambda::Real;
@@ -168,7 +168,7 @@ end
 function functional_glasso(data::FDA.MultivariateFunctionalData, lambda::Real;
                            ncomponents::Integer, kwargs...)
     _dense_parts(data)
-    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:marginal)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, max_k=ncomponents, basis=:marginal)
     fit = functional_glasso(FDA.score_array(fpca), lambda; kwargs...)
     FGLassoResult(fit.precision,fit.sparse_precision,fit.covariance,fit.block_sizes,
                  fit.adjacency,fit.diagnostics,fpca,fit.settings)

@@ -51,7 +51,7 @@ end
     @test fit.diagnostics.converged
     @test fit.fpca isa FDA.MultivariateFPCA
     @test fit.fpca.basis == :pooled
-    @test fit.fpca.settings.maxK == m
+    @test fit.fpca.settings.max_k == m
     @test size(FDA.score_array(fit.fpca)) == (n, p, m)
     @test length(fit.fpca.pooled.eigenvalues) == m
     @test all(>(0), fit.fpca.pooled.eigenvalues)
@@ -110,7 +110,7 @@ end
     @test fit.diagnostics.converged
     @test fit.settings.threshold == 1e-6
     @test fit.diagnostics.settings.alpha == 0.5
-    @test fit.fpca.settings.maxK == 2
+    @test fit.fpca.settings.max_k == 2
     @test occursin("settings=", sprint(show, fit))
     @test size(fit.precisions) == (p,p,2)
     @test all(fit.adjacency .== dropdims(any(fit.component_adjacency; dims=3); dims=3))

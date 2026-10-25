@@ -14,7 +14,7 @@
     end
     d = FunctionalGraphicalModels._dense_data(values, grid)
     for basis in (:marginal, :pooled)
-        fit = FDA.fit(FDA.FPCA, d; ncomponents=2, maxK=2, basis)
+        fit = FDA.fit(FDA.FPCA, d; ncomponents=2, max_k=2, basis)
         scores = FDA.score_array(fit)
         @test size(scores) == (4, 2, 2)
         @test all(b -> size(b.values) == (6, 2), fit.bases)
