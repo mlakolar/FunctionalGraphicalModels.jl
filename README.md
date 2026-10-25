@@ -127,3 +127,9 @@ projected smoothed covariance. See [methods and simulation protocol](docs/DIRECT
 for assumptions, diagnostics, all twelve Biometrika settings, controlled stress
 experiments, and Discovery commands. Paper-table replication remains distinct
 from numerical validation and pilot coverage.
+
+`spectral_l2_aclime` and `fit_spectral_direct` implement the separate
+[spectral-calibrated multiscale SOCP](docs/SPECTRAL_L2_ACLIME.md). They retain
+raw indefinite occupancy covariances and impose both bias-radius constraints
+without a precision pilot. The exact grid, supplied calibration constants,
+failure outcomes and empirical comparison extensions are documented explicitly.

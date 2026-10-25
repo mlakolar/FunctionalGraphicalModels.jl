@@ -1,0 +1,14 @@
+elapsed_seconds = 31.57512903213501
+fit_wall_seconds = 22.80200695991516
+status = "completed"
+candidate_time_failures = 0
+expected_candidate_time_fits = 6
+fit_path_sum_seconds = 21.101612091064453
+scoring_seconds = 0.58709716796875
+primary_pilot = false
+point_pilot = true
+
+[source_sha256]
+"src/spectral_direct.jl" = "b0169a7abfb45a551053ddc45ed7ade1d2b79701465dcdd6807909d669843230"
+"experiments/spectral_comparison.jl" = "161338216422a00bc193ba2c66d1d5a07d01e71f2839bfc9dfb2e395c7d07a86"
+"docs/SPECTRAL_L2_ACLIME.md" = "b11fa510d0ae5fdc46592a41e464fbfe2704bb2dbf1094ef13125bcd0c85569d"

@@ -1,0 +1,5 @@
+max_relative_violation = 1.256145571749718e-13
+checked_columns = 250
+scope = "Independent first-time primal witness replay; all-time column labels, diagonal and cap checks; no fits or risk theorem validation"
+status = "passed"
+skipped_failure_columns = 50

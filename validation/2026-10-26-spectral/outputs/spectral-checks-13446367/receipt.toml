@@ -1,0 +1,5 @@
+seconds = 23.425331115722656
+scope = "Program P and source-preservation checks only; no minimax or paper simulation claim"
+status = "passed"
+source_sha256 = "bf0db9a2b043aab5b2e126cbf238d71e6809a4400cea0f6c80f2125c94bee6b6"
+julia_version = "1.13.2"

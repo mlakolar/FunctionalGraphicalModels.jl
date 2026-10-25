@@ -21,7 +21,8 @@ export quadrature_weights, score_covariance, smooth_bspline,
        simulate_qiao2019, graph_metrics, FGMComponentSelection, select_fgm_components
 export DirectCovariance, DirectPrecisionFit, direct_covariance, fit_direct,
        bias_aclime, interval_symmetrize, simulate_dfgm2020, dfgm2020_settings,
-       bias_aclime_path, fit_direct_path
+       bias_aclime_path, fit_direct_path, spectral_calibration,
+       spectral_l2_aclime, spectral_l2_aclime_path, fit_spectral_direct, spectral_covariance
 
 include("data.jl")
 include("tuning.jl")
@@ -32,6 +33,7 @@ include("separable.jl")
 include("simulation.jl")
 include("direct.jl")
 include("direct_path.jl")
+include("spectral_direct.jl")
 include("dfgm_simulation.jl")
 
 end
