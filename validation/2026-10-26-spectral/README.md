@@ -25,3 +25,10 @@ original recovery jobs remain active. This is not final completion. See
 [protocol](../../docs/SPECTRAL_L2_ACLIME.md) for prespecified constants and scopes.
 Source manifests identify every frozen variant; original baseline sources and
 fits are preserved. Paper calibration constants are empirical sensitivity inputs.
+
+The read-only selection diagnosis13448886 separates3120/5920 valid pointwise
+selections from7/240 complete curves and records the zero-column mechanism.
+Full-curve timing13448656 completed on two saved cases,93.00s and2255.36s
+with four workers, preserving all numerical/infeasible outcomes. CI7b46b44
+passed all four Julia platforms; currentLinux passed4602/4602 checks. These
+receipts supplement the dated report without refitting baseline simulations.

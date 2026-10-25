@@ -1,0 +1,31 @@
+{
+  "commit": "7b46b44f33e0968e52b807d0c8ede101144f5b00",
+  "run_id": 40242406627,
+  "platform_jobs": [
+    {
+      "id": 121316922441,
+      "platform": "Julia LTS Linux x64",
+      "conclusion": "success"
+    },
+    {
+      "id": 121316922569,
+      "platform": "Julia current Windows x64",
+      "conclusion": "success"
+    },
+    {
+      "id": 121316922617,
+      "platform": "Julia current macOS aarch64",
+      "conclusion": "success"
+    },
+    {
+      "id": 121316922739,
+      "platform": "Julia current Linux x64",
+      "conclusion": "success",
+      "passed": 4602,
+      "total": 4602,
+      "seconds": 216.1
+    }
+  ],
+  "scope": "GitHub CI against current dependency master checkouts, not frozen campaign numerical environment",
+  "evidence": "Current Linux job log Test Summary at2026-10-25T23:05:08Z: FunctionalGraphicalModels4602/4602; all four platform jobs verified success viaGitHub API."
+}

@@ -1,0 +1,7 @@
+{
+  "purpose": "Explain severe PD/BIC missingness using existing column/fitting statuses only. No refits or truth-based tuning.",
+  "scope": "240 paper datasets, fixed first20",
+  "resources": "1CPU4GB10min",
+  "tag": "dfgm-spectral-selection-diagnosis-v1",
+  "source_sha256": "1238967fe989ebaed6626eeecb906edb0b99c21113a795ab7c897eced4fcef75"
+}

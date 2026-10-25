@@ -46,6 +46,13 @@ and `bbar_h*B_j`. The implementation uses `g=b/bbar_h` to scale the cones and
 scales score rows by a fixed positive path-wide constant. These are algebraic
 transformations of the same constraints. No precision pilot, unknown sparsity,
 precision one-norm, oracle width choice or covariance eigenvalue clipping enters.
+For numerical boundedness the implementation also sets `t<=sqrt(p)*B_j`.
+This preserves the optimization problem's minimum and precision solutions.
+Indeed, `norm(beta,1)<=sqrt(p)*B_j` follows from the column ball. If a feasible
+point has a larger t, replace it by `sqrt(p)*B_j`: this is at least B_j, so
+the second bias constraint implies the first one still holds. No sparsity
+bound is used in this argument.
+
 The original interval symmetrization preserves column diagonals. Its output is
 radially capped in induced one-norm at the number of fitting subjects. There is
 no PSD precision repair or change in the adjacency threshold (1e-6).

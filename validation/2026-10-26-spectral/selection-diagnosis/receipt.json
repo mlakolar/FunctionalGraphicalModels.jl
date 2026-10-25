@@ -1,0 +1,8 @@
+{
+  "status": "completed",
+  "datasets": 240,
+  "candidate_times": 35520,
+  "evaluation_times": 5920,
+  "scope": "Paper fixed first20 seeds per12 settings. Saved statuses only; no truth tuning or refits. An analytic zero precision column implies a zero diagonal retained by symmetrization and therefore prevents strict PD in exact arithmetic. Other nonPD candidates require a separate explanation.",
+  "reported_PD_zero_column_anomalies": 0
+}

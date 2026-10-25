@@ -1,0 +1,13 @@
+setting,replicates,evaluation_times,selected_times,analytic_zero_blocked_times,other_no_selection_times,complete_selection_replicates,reported_PD_with_analytic_zero_columns
+1,20,200,30,150,20,0,0
+2,20,500,186,222,92,0,0
+3,20,1000,445,310,245,0,0
+4,20,200,35,131,34,0,0
+5,20,500,68,301,131,0,0
+6,20,1000,129,637,234,0,0
+7,20,420,345,41,34,0,0
+8,20,420,380,35,5,0,0
+9,20,420,402,17,1,7,0
+10,20,420,340,42,38,0,0
+11,20,420,380,8,32,0,0
+12,20,420,380,19,21,0,0
