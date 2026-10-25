@@ -1,0 +1,7 @@
+{
+  "purpose": "Final paired figures only after strict1840 report; no fits",
+  "dependency": "afterok:13448698",
+  "resources": "1CPU4GB10min",
+  "tag": "dfgm-spectral-final-figures-v1",
+  "source_sha256": "ab5fddec104c5ff2530ed3ade5c7a1351a118b783a308182a5754e291c03f679"
+}

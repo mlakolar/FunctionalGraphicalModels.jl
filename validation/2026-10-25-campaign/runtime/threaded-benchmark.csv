@@ -1,0 +1,3 @@
+"p","method","time_points","candidates","serial_seconds","threaded_seconds","max_precision_difference","max_violation"
+"100","aclime","2","2","30.731213808059692","14.207624197006226","0.0","8.100542459033022e-11"
+"100","l2_aclime","2","2","89.49907112121582","48.915597915649414","0.0","1.4269920951548443e-6"

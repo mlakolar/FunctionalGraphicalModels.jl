@@ -1,0 +1,214 @@
+     Testing FunctionalGraphicalModels
+      Status `/tmp/SLURM_13422768/jl_dUKiIc/Project.toml`
+  [4c88cf16] Aqua v0.8.18
+  [093aae92] BSplineKit v0.19.3
+  [61c947e1] Clarabel v0.11.1
+  [fb9f034c] CovarianceSelection v0.1.0 `https://github.com/mlakolar/CovarianceSelection.jl#master`
+  [b0173d16] FunctionalDataAnalysis v0.1.0 `https://github.com/mlakolar/FunctionalDataAnalysis.jl#main`
+  [3301cf8d] FunctionalGraphicalModels v0.1.0 `/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source`
+  [87dc4568] HiGHS v1.26.1
+  [4076af6c] JuMP v1.32.1
+  [724a8e84] KernelSmoothing v0.1.0 `https://github.com/mlakolar/KernelSmoothing.jl#master`
+  [0a755509] ProximalBase v0.5.3 `https://github.com/mlakolar/ProximalBase.jl#master`
+  [37e2e46d] LinearAlgebra v1.13.0
+  [9a3f8284] Random v1.11.0
+  [8dfed614] Test v1.11.0
+      Status `/tmp/SLURM_13422768/jl_dUKiIc/Manifest.toml`
+  [14f7f29c] AMD v0.5.4
+  [7d9f7c33] Accessors v0.1.45
+  [66dad0bd] AliasTables v1.1.3
+  [4c88cf16] Aqua v0.8.18
+  [4c555306] ArrayLayouts v1.15.1
+  [093aae92] BSplineKit v0.19.3
+  [aae01518] BandedMatrices v1.14.0
+  [61c947e1] Clarabel v0.11.1
+  [523fee87] CodecBzip2 v0.8.5
+  [944b1d66] CodecZlib v0.7.9
+  [38540f10] CommonSolve v0.2.14
+  [bbf7d656] CommonSubexpressions v0.3.1
+  [f70d9fcc] CommonWorldInvalidations v1.2.2
+  [34da2185] Compat v4.18.1
+  [a33af91c] CompositionsBase v0.1.2
+  [187b0558] ConstructionBase v1.6.0
+  [fb9f034c] CovarianceSelection v0.1.0 `https://github.com/mlakolar/CovarianceSelection.jl#master`
+  [9a962f9c] DataAPI v1.16.0
+  [864edb3b] DataStructures v0.19.6
+  [e2d170a0] DataValueInterfaces v1.0.0
+  [163ba53b] DiffResults v1.1.0
+  [b552c78f] DiffRules v1.16.0
+  [31c24e10] Distributions v0.25.132
+  [ffbed154] DocStringExtensions v0.10.2
+  [e2ba6199] ExprTools v0.1.11
+  [442a2c76] FastGaussQuadrature v1.3.0
+  [1a297f60] FillArrays v1.18.1
+  [f6369f11] ForwardDiff v1.4.6
+  [b0173d16] FunctionalDataAnalysis v0.1.0 `https://github.com/mlakolar/FunctionalDataAnalysis.jl#main`
+  [3301cf8d] FunctionalGraphicalModels v0.1.0 `/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source`
+  [a0844989] Gamma v1.2.0
+⌅ [14197337] GenericLinearAlgebra v0.3.19
+  [87dc4568] HiGHS v1.26.1
+  [34004b35] HypergeometricFunctions v0.3.31
+  [615f187c] IfElse v0.1.1
+  [3587e190] InverseFunctions v0.1.18
+  [92d709cd] IrrationalConstants v0.2.7
+  [82899510] IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] JLLWrappers v1.8.0
+  [682c06a0] JSON v1.12.2
+  [4076af6c] JuMP v1.32.1
+  [724a8e84] KernelSmoothing v0.1.0 `https://github.com/mlakolar/KernelSmoothing.jl#master`
+  [2ab3a3ac] LogExpFunctions v1.0.3
+  [1914dd2f] MacroTools v0.5.16
+  [8c4f8055] MathOptIIS v0.2.1
+  [b8f27783] MathOptInterface v1.54.0
+  [e1d29d7a] Missings v1.2.0
+  [d8a4904e] MutableArithmetics v1.9.1
+  [77ba4419] NaNMath v1.1.5
+  [bac558e1] OrderedCollections v2.0.3
+  [90014a1f] PDMats v0.11.41
+  [69de0a69] Parsers v3.0.0
+  [aea7be01] PrecompileTools v1.3.4
+  [21216c6a] Preferences v1.6.1
+  [0a755509] ProximalBase v0.5.3 `https://github.com/mlakolar/ProximalBase.jl#master`
+  [fc4971f5] ProximalSolvers v0.1.1 `https://github.com/mlakolar/ProximalSolvers.jl#master`
+  [43287f4e] PtrArrays v1.4.0
+  [bfc457fd] QDLDL v0.4.1
+  [1fd47b50] QuadGK v2.11.3
+  [189a3867] Reexport v1.2.2
+  [79098fc4] Rmath v0.9.0
+  [f2b01f46] Roots v3.0.11
+  [431bcebd] SciMLPublic v1.3.0
+  [66db9d55] SnoopPrecompile v1.0.3
+  [a2af1166] SortingAlgorithms v1.2.3
+  [276daf66] SpecialFunctions v2.9.1
+  [aedffcd0] Static v1.4.6
+  [90137ffa] StaticArrays v1.9.24
+  [1e83bf80] StaticArraysCore v1.4.4
+  [10745b16] Statistics v1.11.5
+  [82ae8749] StatsAPI v1.8.0
+  [2913bbd2] StatsBase v0.34.13
+  [4c63d2b9] StatsFuns v2.2.1
+  [ec057cc2] StructUtils v2.11.1
+  [3783bdb8] TableTraits v1.0.1
+  [bd369af6] Tables v1.14.0
+⌅ [a759f4b9] TimerOutputs v0.5.29
+  [3bb67fe8] TranscodingStreams v0.11.3
+  [6e34b625] Bzip2_jll v1.0.9+0
+  [8fd58aa0] HiGHS_jll v1.15.1+3
+  [656ef2d0] OpenBLAS32_jll v0.3.34+0
+  [efe28fd5] OpenSpecFun_jll v0.5.6+0
+  [f50d1b31] Rmath_jll v0.5.2+0
+  [0dad84c5] ArgTools v1.1.2
+  [56f22d72] Artifacts v1.11.0
+  [2a0f44e3] Base64 v1.11.0
+  [ade2ca70] Dates v1.11.0
+  [f43a241f] Downloads v1.7.0
+  [7b1f6079] FileWatching v1.11.0
+  [b77e0a4c] InteractiveUtils v1.11.0
+  [ac6e5ff7] JuliaSyntaxHighlighting v1.12.0
+  [b27032c2] LibCURL v1.0.0
+  [76f85450] LibGit2 v1.11.0
+  [8f399da3] Libdl v1.11.0
+  [37e2e46d] LinearAlgebra v1.13.0
+  [56ddb016] Logging v1.11.0
+  [d6f4376e] Markdown v1.11.0
+  [ca575930] NetworkOptions v1.3.0
+  [44cfe95a] Pkg v1.13.0
+  [de0858da] Printf v1.11.0
+  [9a3f8284] Random v1.11.0
+  [ea8e919c] SHA v1.0.0
+  [9e88b42a] Serialization v1.11.0
+  [2f01184e] SparseArrays v1.13.0
+  [f489334b] StyledStrings v1.11.0
+  [4607b0f0] SuiteSparse
+  [fa267f1f] TOML v1.0.3
+  [a4e569a6] Tar v1.10.0
+  [8dfed614] Test v1.11.0
+  [cf7118a7] UUIDs v1.11.0
+  [4ec0a83e] Unicode v1.11.0
+  [e66e0078] CompilerSupportLibraries_jll v1.5.5+2
+  [deac9b47] LibCURL_jll v8.22.0+0
+  [e37daf67] LibGit2_jll v1.9.7+0
+  [29816b5a] LibSSH2_jll v1.11.104+0
+  [14a3606d] MozillaCACerts_jll v2026.8.13
+  [4536629a] OpenBLAS_jll v0.3.30+0
+  [05823500] OpenLibm_jll v0.8.7+0
+  [458c3c95] OpenSSL_jll v3.5.8+0
+  [efcefdf7] PCRE2_jll v10.46.0+0
+  [bea87d4a] SuiteSparse_jll v7.10.1+0
+  [83775a58] Zlib_jll v1.3.2+0
+  [3161d3a3] Zstd_jll v1.5.7+1
+  [8e850b90] libblastrampoline_jll v5.15.0+0
+  [8e850ede] nghttp2_jll v1.70.0+0
+  [3f19e933] p7zip_jll v17.8.3+0
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading.
+     Testing Running tests...
+Test Summary:             | Pass  Total     Time
+FunctionalGraphicalModels | 4510   4510  1m38.8s
+     Testing FunctionalGraphicalModels tests passed 
+Test Summary:                                    | Pass  Total   Time
+Threaded covariance reconstruction equals serial |    4      4  10.9s
+Test Summary:                                    | Pass  Total     Time
+Independent time-point solves on full-size input |    4      4  3m03.4s
+generated setting=1 p=10 n=30 seconds=0.058212995529174805
+direct covariance ready seconds=0.060907840728759766
+FPCA ready success=true seconds=0.8813698291778564
+starting aclime seconds=3.9577298164367676
+path method=aclime bias=0.01 seconds=0.1562039852142334 failures=0
+path method=aclime bias=0.1 seconds=0.12229490280151367 failures=0
+path method=aclime bias=1.0 seconds=0.12250208854675293 failures=0
+path method=aclime bias=10.0 seconds=0.11278891563415527 failures=0
+path method=aclime bias=20.0 seconds=0.10351896286010742 failures=0
+starting l2_aclime seconds=4.732132911682129
+path method=l2_aclime bias=0.01 seconds=0.40259790420532227 failures=0
+path method=l2_aclime bias=0.1 seconds=0.3535161018371582 failures=0
+path method=l2_aclime bias=1.0 seconds=0.3776531219482422 failures=0
+path method=l2_aclime bias=10.0 seconds=0.34609198570251465 failures=0
+path method=l2_aclime bias=20.0 seconds=0.3947319984436035 failures=1
+starting scaled_lasso seconds=6.62571382522583
+starting DFGM_C seconds=7.552695989608765
+starting DFGM_G seconds=7.553571939468384
+starting DGM_C seconds=7.6275248527526855
+starting DGM_G seconds=7.628216981887817
+starting GGL seconds=7.657331943511963
+starting Naive_C seconds=9.502716779708862
+starting Naive_G seconds=9.503566980361938
+starting scaled_lasso_tuned seconds=9.557001829147339
+setting=1 replicate=1 failures=1 seconds=11.175993919372559
+
+Four-thread cached paper-mode pipeline: Test Failed at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source/experiments/validate_threaded_driver.jl:42
+  Expression: worker(setting_index, 1, folder; mode = :paper, n_override = 30, p_override = 10, integration_points = 31, nlambda = 3, work_points = 15, bias_constants = [0.01, 0.1, 1.0, 10.0, 20.0], path_reuse = true, ntasks = 4, covariance_cache = joinpath(root, "outputs", "bias-menu-canary", "setting-$(setting_index)-rep-1"))
+   Evaluated: worker(1, 1, "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/threaded-v4-check/setting-1-rep-1"; mode = paper, n_override = 30, p_override = 10, integration_points = 31, nlambda = 3, work_points = 15, bias_constants = [0.01, 0.1, 1.0, 10.0, 20.0], path_reuse = true, ntasks = 4, covariance_cache = "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/bias-menu-canary/setting-1-rep-1")
+  Stacktrace:
+   [1] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:758 [inlined]
+   [2] macro expansion
+     @ /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source/experiments/validate_threaded_driver.jl:42 [inlined]
+   [3] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:1967 [inlined]
+   [4] validate_threaded(root::String, out::String)
+     @ Main /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source/experiments/validate_threaded_driver.jl:40
+generated setting=7 p=10 n=30 seconds=0.013262033462524414
+direct covariance ready seconds=0.013303041458129883
+FPCA ready success=true seconds=0.02925395965576172
+starting aclime seconds=0.2770230770111084
+path method=aclime bias=0.01 seconds=0.2712559700012207 failures=0
+path method=aclime bias=0.1 seconds=0.25157594680786133 failures=0
+path method=aclime bias=1.0 seconds=0.3185899257659912 failures=0
+path method=aclime bias=10.0 seconds=0.25681400299072266 failures=0
+path method=aclime bias=20.0 seconds=0.24097919464111328 failures=0
+starting l2_aclime seconds=1.861212968826294
+path method=l2_aclime bias=0.01 seconds=0.7429349422454834 failures=0
+path method=l2_aclime bias=0.1 seconds=0.7325758934020996 failures=0
+path method=l2_aclime bias=1.0 seconds=0.7342510223388672 failures=0
+path method=l2_aclime bias=10.0 seconds=0.7183010578155518 failures=0
+path method=l2_aclime bias=20.0 seconds=0.7193288803100586 failures=0
+starting scaled_lasso seconds=5.5248119831085205
+starting DFGM_C seconds=5.613254070281982
+starting DFGM_G seconds=5.614866018295288
+starting scaled_lasso_tuned seconds=5.718656063079834
+ERROR: LoadError: Some tests did not pass: 1 passed, 1 failed, 0 errored, 0 broken.
+in expression starting at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/path-driver-v4-source/experiments/validate_threaded_driver.jl:53
+setting=7 replicate=1 failures=0 seconds=6.5092151165008545
+Test Summary:                          | Pass  Fail  Total   Time
+Four-thread cached paper-mode pipeline |    1     1      2  21.0s
+RNG of the outermost testset: Xoshiro(0xd4b1c3df411e061b, 0xaa98fc98795d1c87, 0x91730c32a70f7c93, 0x16819f8123f2d29d, 0x4947532dec268cda)

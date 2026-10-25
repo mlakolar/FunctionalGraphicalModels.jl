@@ -1,0 +1,6 @@
+elapsed_seconds = 11.127667903900146
+successful_cold_column_restarts = 0
+paper_reproduction = false
+status = "completed_with_failures"
+fit_failures = 1
+mode = "paper"

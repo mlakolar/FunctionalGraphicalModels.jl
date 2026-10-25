@@ -1,0 +1,3 @@
+ERROR: LoadError: Some tests did not pass: 65 passed, 2 failed, 0 errored, 0 broken.
+in expression starting at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:1
+in expression starting at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/checks.jl:7

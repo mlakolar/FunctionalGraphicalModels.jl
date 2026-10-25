@@ -1,0 +1,11 @@
+{
+  "base_commit": "d284642d20e8b8d03d9f3b89e29d101be6834c58",
+  "files": {
+    "src/spectral_direct.jl": "b0169a7abfb45a551053ddc45ed7ade1d2b79701465dcdd6807909d669843230",
+    "test/spectral_direct.jl": "807518dd2daab646cccbf634c8b0429a99fd063b74d9c89da92b8562f61e28b8",
+    "docs/SPECTRAL_L2_ACLIME.md": "b11fa510d0ae5fdc46592a41e464fbfe2704bb2dbf1094ef13125bcd0c85569d",
+    "experiments/spectral_comparison.jl": "161338216422a00bc193ba2c66d1d5a07d01e71f2839bfc9dfb2e395c7d07a86"
+  },
+  "scope": "Exact-grid fixed calibration and separately labeled six-score empirical selection; pilot only before scaling. All old numerical sources unchanged.",
+  "previous_checks": "13446367 passed67checks; v3 adds runtime stage fields only to solver source and new paired experiment worker."
+}

@@ -1,0 +1,50 @@
+direct_selection = "pointwise BIC across bias/K2 menu; empirical when envelope not externally certified"
+baseline_rank_selection = "FDA_AIC_maxK5"
+K2_menu = [0.029999999999999995, 0.2449489742783178, 2.0]
+replicate = 1
+noise_variance = 0.5
+scaled_lasso_tuned_selection = "pointwise BIC; empirical menu, no iid-theory transfer"
+julia_version = "1.13.2"
+scaled_lasso_penalty_menu = ["quantile", "0.2", "0.35", "0.5", "0.75", "0.5485172001112533"]
+lp_solver = "highs"
+threshold = 1.0e-6
+scalar_penalties = [0.0, 0.02, 1.2]
+seed = 2026112501
+truth_selection = "no_truth_used_for_tuning"
+bandwidths = [0.15, 0.25, 0.4]
+integration_points = 31
+p = 10
+n = 30
+design = "common"
+mode = "paper"
+bias_constant_menu = [0.01, 0.1, 1.0, 10.0, 20.0]
+bias_constant = 1.0
+evaluation_grid = [0.08276892453930444, 0.11932839897052361, 0.3479609763312121, 0.3622706859388913, 0.5277964852719371, 0.5570419676700904, 0.6104922966887898, 0.6405403116149162, 0.8493371147430621, 0.9765843272850981]
+dependency_manifest_sha256 = "b3c2e4c3d606a301e65429c19c00a6b41ae664a12f41626c59e8b92e27a4de5e"
+K1 = 2.0
+setting_index = 1
+baseline_bandwidth_selection = "whole_curve_CV"
+work_points = 15
+schedule = "T10"
+
+[expected_candidates]
+DFGM_C = 3
+GGL = 3
+Naive_G = 3
+Naive_C = 3
+DFGM_G = 3
+scaled_lasso = 1
+DGM_C = 3
+scaled_lasso_tuned = 6
+l2_aclime = 15
+DGM_G = 3
+aclime = 15
+
+[source_sha256]
+"Project.toml" = "0a48d8ac0eb8b5b5c948d4b07cc113330f154221e56d565b36a934016eb98c01"
+"src/dfgm_simulation.jl" = "78047ffb4a4535fce1c5df78f1fc3881ff9b5b52ff29aaf15031c59d9b6ded38"
+"experiments/dfgm2020.jl" = "d6e83e097b6c6bdacdd53dc5930b3e3315ef6f7108cdb4677f179c4a5174e99c"
+"src/direct.jl" = "594d41a41689377528ecd843c14ea8257f140a1996fdb1e1fdd28c53d2ec3e00"
+"src/FunctionalGraphicalModels.jl" = "feb14912466f1f42abe7046a9aadc4972ea4c271711fff2ad7a98056faead6e9"
+"experiments/dfgm_factorized.jl" = "e00f7a0343b06f29d0e443ba985736b84ce83cc9e8b4ab1a8bcbe12b1287d771"
+"experiments/dfgm_common.jl" = "22916167ac6af2601635cbeae4636f5b97146c37e032db68c4550b796615f230"

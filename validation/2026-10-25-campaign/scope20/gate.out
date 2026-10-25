@@ -1,0 +1,28 @@
+Both frozen covariance variants accepted with exact provenance; wrong seed rejected
+generated setting=1 p=10 n=30 seconds=0.6074609756469727
+direct covariance ready seconds=3.2279860973358154
+FPCA ready success=true seconds=13.960464000701904
+starting scaled_lasso seconds=18.47006392478943
+starting DFGM_C seconds=21.340022087097168
+starting DFGM_G seconds=21.360684871673584
+starting DGM_C seconds=21.395440101623535
+starting DGM_G seconds=21.396077871322632
+starting GGL seconds=21.417800903320312
+starting Naive_C seconds=23.830151081085205
+starting Naive_G seconds=23.8309109210968
+starting scaled_lasso_tuned seconds=23.86722993850708
+setting=1 replicate=1001 failures=0 seconds=25.465004920959473
+generated setting=7 p=10 n=30 seconds=0.6083860397338867
+direct covariance ready seconds=2.0539519786834717
+FPCA ready success=true seconds=12.134773969650269
+starting scaled_lasso seconds=13.033752918243408
+starting DFGM_C seconds=15.787187814712524
+starting DFGM_G seconds=18.30085802078247
+starting scaled_lasso_tuned seconds=18.308692932128906
+setting=7 replicate=1001 failures=0 seconds=19.696067810058594
+Found 2 task directories; inspect coverage.csv and per-task fits.csv
+Paired contrasts saved; inspect paired counts and coverage before making comparisons
+Found 2 task directories; inspect coverage.csv and per-task fits.csv
+Paired contrasts saved; inspect paired counts and coverage before making comparisons
+[{"setting": 1, "replicate": 1001, "status": "completed", "source_variant": "not_checked", "candidate_fits": 28, "fit_failures": 0, "metric_rows": 560, "missing_selected_times": {"DFGM_C": 0, "GGL": 0, "DFGM_G": 0, "scaled_lasso": 0, "DGM_C": 0, "scaled_lasso_tuned": 0, "DGM_G": 0, "Naive_G": 0, "Naive_C": 0}, "independent_metric_rows": 0, "max_independent_bic_error": 0.0, "max_independent_loss_error": 0.0, "successful_cold_column_restarts": 0}]
+[{"setting": 7, "replicate": 1001, "status": "completed", "source_variant": "not_checked", "candidate_fits": 13, "fit_failures": 0, "metric_rows": 78, "missing_selected_times": {"DFGM_C": 0, "DFGM_G": 0, "scaled_lasso": 2, "scaled_lasso_tuned": 0}, "independent_metric_rows": 0, "max_independent_bic_error": 0.0, "max_independent_loss_error": 0.0, "successful_cold_column_restarts": 0}]

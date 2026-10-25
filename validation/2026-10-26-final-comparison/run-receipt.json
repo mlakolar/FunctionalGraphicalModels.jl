@@ -1,0 +1,346 @@
+{
+  "status": "verified_reports_and_figures",
+  "original_datasets": 1200,
+  "spectral_datasets": 1840,
+  "controls_shared_with_prior_study": 1600,
+  "own_primary_paper_scope": 240,
+  "preserved_extra_proposal_datasets": [
+    [
+      9,
+      21
+    ],
+    [
+      9,
+      22
+    ],
+    [
+      9,
+      23
+    ],
+    [
+      9,
+      24
+    ],
+    [
+      9,
+      25
+    ],
+    [
+      9,
+      26
+    ],
+    [
+      9,
+      27
+    ],
+    [
+      9,
+      28
+    ],
+    [
+      9,
+      29
+    ],
+    [
+      9,
+      30
+    ],
+    [
+      9,
+      31
+    ],
+    [
+      9,
+      32
+    ],
+    [
+      9,
+      33
+    ],
+    [
+      9,
+      34
+    ],
+    [
+      9,
+      35
+    ],
+    [
+      9,
+      36
+    ],
+    [
+      9,
+      37
+    ],
+    [
+      9,
+      38
+    ],
+    [
+      9,
+      39
+    ],
+    [
+      9,
+      40
+    ],
+    [
+      9,
+      41
+    ],
+    [
+      9,
+      42
+    ],
+    [
+      9,
+      43
+    ],
+    [
+      9,
+      44
+    ],
+    [
+      9,
+      45
+    ],
+    [
+      9,
+      46
+    ],
+    [
+      9,
+      47
+    ],
+    [
+      9,
+      48
+    ],
+    [
+      9,
+      49
+    ],
+    [
+      9,
+      50
+    ],
+    [
+      9,
+      51
+    ],
+    [
+      9,
+      52
+    ],
+    [
+      9,
+      53
+    ],
+    [
+      9,
+      54
+    ],
+    [
+      9,
+      55
+    ],
+    [
+      9,
+      56
+    ],
+    [
+      9,
+      57
+    ],
+    [
+      9,
+      58
+    ],
+    [
+      9,
+      59
+    ],
+    [
+      9,
+      60
+    ],
+    [
+      9,
+      61
+    ],
+    [
+      9,
+      62
+    ],
+    [
+      9,
+      63
+    ],
+    [
+      9,
+      64
+    ],
+    [
+      9,
+      65
+    ],
+    [
+      9,
+      66
+    ],
+    [
+      9,
+      67
+    ],
+    [
+      9,
+      68
+    ],
+    [
+      9,
+      69
+    ],
+    [
+      9,
+      70
+    ],
+    [
+      9,
+      71
+    ],
+    [
+      9,
+      72
+    ],
+    [
+      9,
+      73
+    ],
+    [
+      9,
+      74
+    ],
+    [
+      9,
+      75
+    ],
+    [
+      9,
+      76
+    ],
+    [
+      9,
+      77
+    ],
+    [
+      9,
+      78
+    ],
+    [
+      9,
+      79
+    ],
+    [
+      9,
+      80
+    ],
+    [
+      9,
+      81
+    ],
+    [
+      9,
+      82
+    ],
+    [
+      9,
+      83
+    ],
+    [
+      9,
+      84
+    ],
+    [
+      9,
+      85
+    ],
+    [
+      9,
+      86
+    ],
+    [
+      9,
+      87
+    ],
+    [
+      9,
+      88
+    ],
+    [
+      9,
+      89
+    ],
+    [
+      9,
+      90
+    ],
+    [
+      9,
+      91
+    ],
+    [
+      9,
+      92
+    ]
+  ],
+  "stored_candidate_fits": 272520,
+  "primary_candidate_fits": 250200,
+  "metric_rows": 13954360,
+  "recorded_original_candidate_failures": 414,
+  "passed_original_dataset_checks": 1200,
+  "independent_metric_rows_final_report": 26598,
+  "max_independent_BIC_error": 6.548361852765083e-11,
+  "max_independent_loss_error": 4.263256414560601e-14,
+  "transferred_archives": {
+    "original": {
+      "kind": "original",
+      "archive": "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/final-original-evidence-20261026.tar.gz",
+      "sha256": "72675829790680461f859ef5559943aeba65e416143f5b65007a5e9c6be96f18",
+      "bytes": 1641072
+    },
+    "spectral": {
+      "kind": "spectral",
+      "archive": "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/final-spectral-evidence-20261026.tar.gz",
+      "sha256": "0608f97629c501b4e111fa327fcef76a847288b099ebee1d3b96b9a4e11c99c7",
+      "bytes": 2189894
+    },
+    "returned": {
+      "kind": "returned",
+      "archive": "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/final-returned-evidence-20261026.tar.gz",
+      "sha256": "b611a081e7b9308cc0c3df1a664caddbe895e019cf5ebeaff52b5872df86c9dc",
+      "bytes": 1112299
+    }
+  },
+  "spectral_figures_archive_sha256": "ac5097a13a2c9d9ed620fbfb9bb75f6d127b39290c21014187c50ef4e3542923",
+  "report_jobs": [
+    "13447246",
+    "13448698",
+    "13449134"
+  ],
+  "figure_jobs": [
+    "13448847",
+    "13449641"
+  ],
+  "scope": "Fixedfirst20 ACLIME/l2/spectral comparisons;100 originalcomparators/SZ;72extra completedproposaldatasets retainedoutsideprimarysummary. Original300 producers allterminal295COMPLETED5FAILED butall1200outputsvalidated,6datasetswith414recordedcandidaterejections. No fitted dataset rerun for reporting.",
+  "paired_figure_archive_sha256": "68c311a59046f41fe3431a64783dca5ad42d74ac607ec3abb55cba777a19cbaf",
+  "figure_QA": "Originalactual/nominal +newfinalpapercoverage +pairedcomparison inspected. Other3spectralPNG byteidenticaltopriorinspectedfigures.",
+  "recorded_failed_fit_rows_exported": 414,
+  "runtime_environment": "../2026-10-26-spectral/environment/Manifest.toml",
+  "latest_verified_CI": {
+    "commit": "bb10c07a37dea81020cc12a95d3d4501fabed31c",
+    "run": 40244231190,
+    "all_four_platforms": "success"
+  },
+  "no_pending_baselines": true
+}

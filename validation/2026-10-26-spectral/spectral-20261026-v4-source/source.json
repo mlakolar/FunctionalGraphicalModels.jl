@@ -1,0 +1,14 @@
+{
+  "base_commit": "d284642d20e8b8d03d9f3b89e29d101be6834c58",
+  "files": {
+    "src/spectral_direct.jl": "26814f6bfec745f9c050693ad92e3fbc8d58c30264df8b2d8d51ae21ecfc038d",
+    "test/spectral_direct.jl": "807518dd2daab646cccbf634c8b0429a99fd063b74d9c89da92b8562f61e28b8",
+    "docs/SPECTRAL_L2_ACLIME.md": "b11fa510d0ae5fdc46592a41e464fbfe2704bb2dbf1094ef13125bcd0c85569d",
+    "experiments/spectral_comparison.jl": "34323a3a19f2c66a6767fc8a9b79052233f9a468def5f569ca3b1bcd543d46d5",
+    "experiments/audit_spectral_saved.jl": "1fe9db9202b857e3e553dc913b4d5ccc22676f6afbff29330fc29c82af771a25"
+  },
+  "passed_checks": "13446490:67/67",
+  "passed_point_pilot": "13446494:13 widths, extra covariance .853s, precision path21.102s including JIT, all6 optimal",
+  "change_from_v3": "Explicit supplied-mean affirmation for cache use, runtime metadata and output failure handling, independent witness audit. Numerical column program unchanged.",
+  "canary_scope": "paper6:1 and12:1 full evaluation grids; controls1:1 and16:1 recorded train/holdout split. Full valid outputs may be reused as primary results; no baseline refits."
+}

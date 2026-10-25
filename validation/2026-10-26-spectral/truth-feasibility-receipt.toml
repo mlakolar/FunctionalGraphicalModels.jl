@@ -1,0 +1,13 @@
+centering = "known_zero"
+scope = "Finite-sample true columns satisfy all Program(P) constraints with b=0 and t=column l1; implementation check, not a risk theorem"
+noise_variance = 1.0
+N = 120
+seed = 2026102601
+p = 2
+design = "independent_uniform"
+supplied_L = 1.0
+m = 8
+curvature = 0.0
+condition_bound = 2.0
+status = "passed"
+target_time = 0.5

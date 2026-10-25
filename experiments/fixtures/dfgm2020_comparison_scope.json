@@ -1,0 +1,11 @@
+{
+  "own_method_replicates": 20,
+  "other_method_replicates": 100,
+  "selection": "first_fixed_replicate_ids",
+  "authorized_by": "Mladen selected first20 fixed seeds per setting in chat on2026-10-25; preserve completed fits",
+  "applies_to": [
+    "aclime",
+    "l2_aclime"
+  ],
+  "scope": "Primary reporting scope; completed extra proposal fits preserved outside primary summaries"
+}

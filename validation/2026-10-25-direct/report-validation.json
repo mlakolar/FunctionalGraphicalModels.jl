@@ -1,0 +1,77 @@
+{
+  "pilot": [
+    {
+      "setting": 1,
+      "status": "completed",
+      "candidate_fits": 28,
+      "time_points": 10,
+      "metric_rows": 560,
+      "fit_failures": 0
+    },
+    {
+      "setting": 2,
+      "status": "completed",
+      "candidate_fits": 28,
+      "time_points": 25,
+      "metric_rows": 1400,
+      "fit_failures": 0
+    },
+    {
+      "setting": 3,
+      "status": "incomplete"
+    },
+    {
+      "setting": 4,
+      "status": "completed",
+      "candidate_fits": 28,
+      "time_points": 10,
+      "metric_rows": 560,
+      "fit_failures": 0
+    },
+    {
+      "setting": 5,
+      "status": "incomplete"
+    },
+    {
+      "setting": 6,
+      "status": "incomplete"
+    },
+    {
+      "setting": 7,
+      "status": "completed",
+      "candidate_fits": 13,
+      "time_points": 21,
+      "metric_rows": 546,
+      "fit_failures": 0
+    },
+    {
+      "setting": 8,
+      "status": "completed",
+      "candidate_fits": 13,
+      "time_points": 21,
+      "metric_rows": 546,
+      "fit_failures": 0
+    },
+    {
+      "setting": 9,
+      "status": "completed",
+      "candidate_fits": 13,
+      "time_points": 21,
+      "metric_rows": 546,
+      "fit_failures": 0
+    },
+    {
+      "setting": 10,
+      "status": "incomplete"
+    },
+    {
+      "setting": 11,
+      "status": "incomplete"
+    },
+    {
+      "setting": 12,
+      "status": "incomplete"
+    }
+  ],
+  "checks": "expected candidate/time counts; recorded failures; finite precision losses; stress coverage and selected-fit uniqueness; no numerical refits"
+}

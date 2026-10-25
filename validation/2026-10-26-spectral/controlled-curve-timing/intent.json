@@ -1,0 +1,11 @@
+{
+  "state": "prepared",
+  "tag": "dfgm-spectral-curve-timing-v1",
+  "purpose": "Two-case full-curve timing repair after documented captured-clock bug. Reuses existing A_h; independent local clocks; no baseline refits or primary estimates changed.",
+  "resources": "4CPU12GB2h",
+  "cases": [
+    "paper7:1",
+    "paper6:1"
+  ],
+  "source_sha256": "02e03791a51ee9cf981ea6c7dbb3434247717b16a6c2c38584119e8de74bdfc4"
+}

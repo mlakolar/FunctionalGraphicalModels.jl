@@ -1,0 +1,10 @@
+{
+  "purpose": "All1840 saved new outputs; original baselines only where complete. Final report after verified original reporter requires full coverage. No fits.",
+  "source_sha256": "6f6d33a2ad54ad72aad1936d0d735fb61b8d55bb0433310387ee191eaa1f792d",
+  "resources_each": "1CPU8GB1h",
+  "tags": [
+    "dfgm-spectral-full-current-v3",
+    "dfgm-spectral-full-final-v3"
+  ],
+  "final_dependency": "afterok:13447246"
+}

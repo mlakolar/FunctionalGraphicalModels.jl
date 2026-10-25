@@ -1,0 +1,11 @@
+{
+  "archive": "spectral-full-current-v3-evidence.tar.gz",
+  "sha256": "b116139b12cdbaf844168e37a7b900d5663ffd2f9af5c12fe029155b154131e4",
+  "new_datasets": 1840,
+  "baseline_paper_datasets_complete": 223,
+  "baseline_paper_datasets_pending": 17,
+  "report_job": "13448697",
+  "figures_job": "13448709",
+  "strict_final_job": "13448698",
+  "strict_final_dependency": "afterok:13447246"
+}

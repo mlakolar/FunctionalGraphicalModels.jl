@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Mladen Kolar <mkolar@usc.edu>"]
 
 [deps]
+Clarabel = "61c947e1-3e6d-4ee4-985a-eec8c727bd6e"
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 BSplineKit = "093aae92-e908-43d7-9660-e50ee39d5a0a"
 CovarianceSelection = "fb9f034c-9bf8-4e47-a0a4-723273363029"
 FunctionalDataAnalysis = "b0173d16-ca42-4446-bf44-e56735cff075"
@@ -19,6 +22,9 @@ KernelSmoothing = {path = "../KernelSmoothing.jl"}
 ProximalBase = {path = "../ProximalBase.jl"}
 
 [compat]
+Clarabel = "0.11"
+HiGHS = "1"
+JuMP = "1"
 Aqua = "0.8"
 BSplineKit = "0.19"
 CovarianceSelection = "0.1"

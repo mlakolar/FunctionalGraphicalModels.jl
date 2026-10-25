@@ -1,0 +1,12 @@
+source = "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v5-source"
+scope = "Separate mechanical one-time-point benchmark on existing matrices; not additional independent simulations or changes to primary estimates"
+solver_threads = 1
+menus = "six original K2 grid positions1,7,13,19,25,31 at fixed bias1; original sixSZ penalties; exact-grid six spectral scores. Different constraints/calibration retained; equal candidate counts do not imply equal statistical tuning."
+warmup = "sample0 first call in this process, sample1 warm repeat; no discarded calls; same allocation sequential methods"
+hostname = "a03-18.hpc.usc.edu"
+benchmark_sha256 = "49521650d3eb8d5b9c7c07578c88f8e84392188712a33ba6e9d87d0d55968aa9"
+reason = "Independent controlled wall clocks after detecting shared aggregate timing variable in original parallel spectral worker"
+threads = 1
+runtime = "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/common-fast-v2-source"
+cpu_model = "AMD EPYC 7513 32-Core Processor"
+failure_classification = "spectral numerical failures and certified infeasibility are separate; legacy failures remain unclassified with raw errors"

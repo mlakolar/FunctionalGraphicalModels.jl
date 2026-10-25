@@ -1,0 +1,46 @@
+generated setting=1 p=10 n=30 seconds=0.6777980327606201
+direct covariance ready seconds=3.87083101272583
+FPCA ready success=true seconds=15.14642596244812
+starting aclime seconds=20.546476125717163
+path method=aclime bias=0.01 seconds=4.424379825592041 failures=0
+path method=aclime bias=0.1 seconds=0.16439390182495117 failures=0
+path method=aclime bias=1.0 seconds=0.14344096183776855 failures=0
+path method=aclime bias=10.0 seconds=0.11898112297058105 failures=0
+path method=aclime bias=20.0 seconds=0.11823105812072754 failures=0
+starting l2_aclime seconds=25.614819049835205
+path method=l2_aclime bias=0.01 seconds=5.370686054229736 failures=0
+path method=l2_aclime bias=0.1 seconds=0.4028928279876709 failures=0
+path method=l2_aclime bias=1.0 seconds=0.4494011402130127 failures=0
+path method=l2_aclime bias=10.0 seconds=0.546518087387085 failures=0
+path method=l2_aclime bias=20.0 seconds=0.582050085067749 failures=1
+starting scaled_lasso seconds=33.002421140670776
+starting DFGM_C seconds=34.26478910446167
+starting DFGM_G seconds=34.265905141830444
+starting DGM_C seconds=34.350492000579834
+starting DGM_G seconds=34.35124897956848
+starting GGL seconds=34.3850371837616
+starting Naive_C seconds=37.45425796508789
+starting Naive_G seconds=37.455568075180054
+starting scaled_lasso_tuned seconds=37.518325090408325
+setting=1 replicate=1 failures=1 seconds=39.79407811164856
+generated setting=7 p=10 n=30 seconds=0.08079290390014648
+direct covariance ready seconds=0.16937494277954102
+FPCA ready success=true seconds=1.7968528270721436
+starting aclime seconds=2.113952875137329
+path method=aclime bias=0.01 seconds=0.31645703315734863 failures=0
+path method=aclime bias=0.1 seconds=0.37644505500793457 failures=0
+path method=aclime bias=1.0 seconds=0.3791239261627197 failures=0
+path method=aclime bias=10.0 seconds=0.32458996772766113 failures=0
+path method=aclime bias=20.0 seconds=0.3549940586090088 failures=0
+starting l2_aclime seconds=3.946077823638916
+path method=l2_aclime bias=0.01 seconds=1.2023329734802246 failures=0
+path method=l2_aclime bias=0.1 seconds=1.0840189456939697 failures=0
+path method=l2_aclime bias=1.0 seconds=1.0585620403289795 failures=0
+path method=l2_aclime bias=10.0 seconds=1.177706003189087 failures=0
+path method=l2_aclime bias=20.0 seconds=1.0428590774536133 failures=0
+starting scaled_lasso seconds=9.5414719581604
+starting DFGM_C seconds=9.700785875320435
+starting DFGM_G seconds=9.702817916870117
+starting scaled_lasso_tuned seconds=9.825267791748047
+setting=7 replicate=1 failures=0 seconds=11.10723876953125
+[{"setting": 1, "replicate": 1, "status": "completed_with_failures", "candidate_fits": 58, "fit_failures": 1, "metric_rows": 1140, "successful_cold_column_restarts": 0}, {"setting": 7, "replicate": 1, "status": "completed", "candidate_fits": 43, "fit_failures": 0, "metric_rows": 1806, "successful_cold_column_restarts": 0}]

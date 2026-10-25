@@ -1,0 +1,26 @@
+{
+  "source_snapshot": "path-driver-v4-source",
+  "archive_sha256": "116afaa4d09bb7e809ac50979b8f0c7a3a3d22517c65c974236f293ec0bc57be",
+  "sha256": {
+    "src/direct.jl": "594d41a41689377528ecd843c14ea8257f140a1996fdb1e1fdd28c53d2ec3e00",
+    "src/direct_path.jl": "f60eede6edfe3635f6870565617caaa9dada3b2b54d4deb3da110929c8731738",
+    "experiments/dfgm2020.jl": "b167369d4a39c2a34a671416ed34f9b0068464ec8d5d4ff05ced60126a31c4a8",
+    "experiments/dfgm_cache.jl": "67554e44a1157d5565b6dce3fc21b4952a616cc82da9a41af1a72890f0c5ae8e",
+    "src/dfgm_simulation.jl": "78047ffb4a4535fce1c5df78f1fc3881ff9b5b52ff29aaf15031c59d9b6ded38",
+    "scripts/discovery_dfgm.sbatch": "c301c1b62cc3ebca5eb7403834f3250b08430df9352ef64602b8989d4d69db15",
+    "scripts/dfgm_worker.sh": "e03342d3568b051ed3e9256ae8bfd1ff3ce25b7dea1f03b7d012169568127741",
+    "Manifest.toml": "b3c2e4c3d606a301e65429c19c00a6b41ae664a12f41626c59e8b92e27a4de5e"
+  },
+  "package_tests_passed": 4510,
+  "strict_canary_job": "13422768 FAILED; one excluded ALMOST_OPTIMAL after one exact cold restart",
+  "failure_accounting_job": "13422783 COMPLETED",
+  "production_job_range": [
+    "13422784",
+    "13423083"
+  ],
+  "production_pools": 300,
+  "production_datasets": 1200,
+  "numerical_model": "Same fixed-pilot convex constraints and original solver tolerances; nonunique optimal points can differ",
+  "runtime_benchmark_scope": "One saved full-size covariance center slice for each p;7 K2 candidates, bias constant1, two repeats; not campaign-wide timing",
+  "threading_scope": "Two saved p100 time slices,2 K2 candidates,bias constant1; identical precision for serial versus thread-parallel time solves"
+}

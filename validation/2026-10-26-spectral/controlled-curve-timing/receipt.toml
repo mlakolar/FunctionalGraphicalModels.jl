@@ -1,0 +1,47 @@
+cpu_model = "AMD EPYC 7513 32-Core Processor"
+source = "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v5-source"
+benchmark_sha256 = "02e03791a51ee9cf981ea6c7dbb3434247717b16a6c2c38584119e8de74bdfc4"
+scope = "Separate two-case full-curve precision timing repair, all exact-grid six-score programs, four private time tasks. Cached covariances; no resimulation or primary-estimate replacement. Excludes covariance construction, checkpoint I/O, likelihood scoring and statistical evaluation."
+hostname = "a02-12.hpc.usc.edu"
+status = "completed"
+
+[[cases]]
+precision_phase_wall_seconds = 92.999931935
+cap_sum_seconds = 0.18367371400000002
+candidates_per_time = 6
+replicate = 1
+numerical_candidate_times = 0
+solver_threads = 1
+column_model_solve_sum_seconds = 324.51036045499995
+widths = 13
+accepted_candidate_times = 123
+times = 21
+n = 200
+p = 50
+symmetrization_sum_seconds = 8.280809819
+setting = 7
+threads = 4
+diagonal_calibration_sum_seconds = 0.0005110790000000001
+calibration_seconds = 0.509326901
+infeasible_candidate_times = 3
+minimum_visits = 6
+[[cases]]
+precision_phase_wall_seconds = 2255.356618815
+cap_sum_seconds = 0.004463944
+candidates_per_time = 6
+replicate = 1
+numerical_candidate_times = 2
+solver_threads = 1
+column_model_solve_sum_seconds = 8301.303995077003
+widths = 17
+accepted_candidate_times = 215
+times = 50
+n = 200
+p = 100
+symmetrization_sum_seconds = 68.03685036100003
+setting = 6
+threads = 4
+diagonal_calibration_sum_seconds = 0.001421353
+calibration_seconds = 6.8047e-5
+infeasible_candidate_times = 83
+minimum_visits = 50

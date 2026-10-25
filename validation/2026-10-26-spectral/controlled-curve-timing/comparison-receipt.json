@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "scope": "Private timing clock/concurrency checks and accepted/infeasible/numerical count agreement with primary cases only. Does not replace primary matrices or establish independent statistical replication.",
+  "job_id": "13448656",
+  "cases": 2,
+  "numerical_source_sha256": "f0507fed16b485dbb4b17b4b9c3e560c8c0616926df1315550f6eb439b0be1df",
+  "julia_binary": "/home1/mkolar/juliaPkg/julia-1.13.2/bin/julia",
+  "runtime": "common-fast-v2-source",
+  "timing_attempt": "One full-curve measurement per case in the same allocation. First case includes JIT; second follows in the same process. Four time workers, one solver thread each.",
+  "archive_sha256": "d1bae54c02d52b158a3568dbe0fe980f76c0f56cd4f0a034a0218bf9358bfe7d"
+}

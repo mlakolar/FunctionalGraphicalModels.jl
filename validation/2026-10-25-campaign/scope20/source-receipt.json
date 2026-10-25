@@ -1,0 +1,34 @@
+{
+  "authorization": "First20 fixed replicate IDs per setting for aclime/l2_aclime; scaled lasso and original comparators all100; preserve all completed fits",
+  "gate_job": "13424370",
+  "gate_state": "COMPLETED",
+  "gate_elapsed_seconds": 90,
+  "fresh_reduced_canary_fits": 41,
+  "fresh_reduced_canary_failures": 0,
+  "checks": [
+    "Two frozen covariance caches accepted and wrong seed rejected",
+    "New method_subset metadata/fit coverage for common and irregular reduced canaries",
+    "First20 forbidden from reduced production source",
+    "Primary summary/paired counts exclude replica21 proposal results",
+    "Perturbing excluded proposal loss records leaves summary/paired CSVs byte-identical"
+  ],
+  "source": "scaled-original-v2-source",
+  "archive_sha256": "dd3abfacfdb3714202cec96b30ccff3f614c3dac76e70a636ffd475b6c57321a",
+  "manifest_sha256": "b3c2e4c3d606a301e65429c19c00a6b41ae664a12f41626c59e8b92e27a4de5e",
+  "runtime_project": "Existing common-fast-v2-source with byte-identical Project/src and exact same Manifest; avoids stalled precompilation",
+  "preserved_stalled_gate": "13424241, cancelled before fitting checks; source-v1 and logs retained",
+  "migration": {
+    "replaced_pools": 222,
+    "replacement_datasets": 888,
+    "covariance_reuse_datasets": 292,
+    "cancelled_old_running_pools": 73,
+    "cancelled_old_pending_pools": 149,
+    "retained_pending_jobs_released": 35,
+    "deferred_near_finish_pools": 3,
+    "preserved_completed_beyond20_pools": 15,
+    "canonical_dataset_coverage": 1200,
+    "retained_first20_links_unchanged": true,
+    "reporter": "13424604 afterany of300 current producer IDs; old held reporter13423668 cancelled before start"
+  },
+  "scope": "Gate and migration evidence; no claim of full paper replication or theoretical risk domination"
+}

@@ -1,0 +1,14 @@
+{
+  "base_commit": "d284642d20e8b8d03d9f3b89e29d101be6834c58",
+  "files": {
+    "src/spectral_direct.jl": "f0507fed16b485dbb4b17b4b9c3e560c8c0616926df1315550f6eb439b0be1df",
+    "test/spectral_direct.jl": "fde19cb150415a100cd0fa5a0b4f996da8e65129fea4d7a88c4e3df7b348c89e",
+    "docs/SPECTRAL_L2_ACLIME.md": "d7f3b6a1dc93f7268ed4a6b4c8351a4843092408dbb1c0dc6b9856f0ccdd9107",
+    "experiments/spectral_comparison.jl": "58dfc1b230b3a1e410e08b8e6563c840b956cde43afa7b4f20e79265e42564a2",
+    "experiments/audit_spectral_saved.jl": "1fe9db9202b857e3e553dc913b4d5ccc22676f6afbff29330fc29c82af771a25",
+    "experiments/spectral_batch.jl": "22e1e8b26386f9cffaf71594fb9fdcc9e89586b84dee7b428c243e33f98e1947",
+    "experiments/report_spectral_comparison.py": "57b2cc7a4026610e0c61cef39ffd74bb394e26eac8f116935edf23a0293fb780"
+  },
+  "numerical_program_change_from_v3": "None. Covariance helper adds supplied-mean/domain guards. Worker adds per-time durable checkpoints and explicit matching-source recovery, stage timing and persistent batch execution. Regeneration verifies full target plus middle-time .25 occupancy matrix and counts; v3/v4 checked all times.",
+  "protocol": "Same prespecified exact-grid and fixed/empirical constants from v2 docs; no truth-driven calibration changes."
+}

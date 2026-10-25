@@ -1,0 +1,29 @@
+
+Spectral-calibrated multiscale program P: Test Failed at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:43
+  Expression: r.status === :optimal
+   Evaluated: infeasible_zero_fallback === optimal
+  Stacktrace:
+   [1] top-level scope
+     @ /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:2
+   [2] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:1967 [inlined]
+   [3] macro expansion
+     @ /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:43 [inlined]
+   [4] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:758 [inlined]
+
+Spectral-calibrated multiscale program P: Test Failed at /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:44
+  Expression: r.columns[1, 1] < 0
+   Evaluated: 0.0 < 0
+  Stacktrace:
+   [1] top-level scope
+     @ /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:2
+   [2] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:1967 [inlined]
+   [3] macro expansion
+     @ /project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/spectral-20261026-v1-source/test/spectral_direct.jl:44 [inlined]
+   [4] macro expansion
+     @ ~/juliaPkg/julia-1.13.2/share/julia/stdlib/v1.13/Test/src/Test.jl:758 [inlined]
+Test Summary:                            | Pass  Fail  Total   Time
+Spectral-calibrated multiscale program P |   65     2     67  21.0s
+RNG of the outermost testset: Xoshiro(0x8b23ff3fb71d0a49, 0xc929c5c930352111, 0x6e54fba1e1ba7850, 0x26524675f867b30b, 0x1a8a27fe7b36ac59)

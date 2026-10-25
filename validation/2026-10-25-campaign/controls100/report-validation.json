@@ -1,0 +1,9 @@
+{
+  "datasets": 1600,
+  "main_fits": 11200,
+  "scaled_calibration_fits": 9600,
+  "fit_failures": 0,
+  "summary_rows": 96,
+  "replicates_per_setting": 100,
+  "exact_default_replay": true
+}

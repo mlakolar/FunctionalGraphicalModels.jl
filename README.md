@@ -115,8 +115,31 @@ scores, graph metrics and numerical failure handling. See the project-specific
 and [reproduction guide](docs/REPRODUCTION.md). The [validation receipt](docs/VALIDATION.md)
 includes a paper-size AR(2) pilot, its ROC figure and adverse findings.
 
-The implementation includes all four estimator families. Published-table and
-real-data reproduction remain incomplete. Supplied truncation and tuning choices,
+The implementation includes all four estimator families. The
+[completed paired implementation comparison](docs/IMPLEMENTATION_COMPARISON_20261026.md)
+covers all 1,200 paper datasets and 1,600 controls, with the fixed first-20
+scope for our proposals. It reports matrix/graph losses, paired MCSE, source
+versions, numerical and selection failures, and controlled computation timings. Supplied truncation and tuning choices,
 finite ADMM tolerance and functional model assumptions remain explicit. Inspect
 convergence diagnostics before interpreting a graph. Sparse CLIME estimates need
 not be positive definite; DFGM reports that property at each grid point.
+
+## Direct doubly functional precision estimation
+
+`direct_covariance` and `fit_direct` add bias-aware ACLIME, multiscale
+ℓ₂-ACLIME (an ℓ₂ smoothing-bias budget, not ridge), and scaled lasso on a
+projected smoothed covariance. See [methods and simulation protocol](docs/DIRECT_DFGM.md)
+for assumptions, diagnostics, all twelve Biometrika settings, controlled stress
+experiments, and Discovery commands. The completed study compares our implementations on the same datasets;
+matching published numerical tables is not an objective.
+
+`spectral_l2_aclime` and `fit_spectral_direct` implement the separate
+[spectral-calibrated multiscale SOCP](docs/SPECTRAL_L2_ACLIME.md). They retain
+raw indefinite occupancy covariances and impose both bias-radius constraints
+without a precision pilot. The exact grid, supplied calibration constants,
+failure outcomes and empirical comparison extensions are documented explicitly.
+
+The [final comparison and all reporting inputs](docs/IMPLEMENTATION_COMPARISON_20261026.md)
+preserve adverse findings, finite indefinite losses and PD-selection missingness.
+The spectral fixed calibration returns zero in this study; empirical tuning does
+not establish an accuracy advantage. Conditional theory is stated separately.
