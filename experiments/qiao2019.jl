@@ -206,7 +206,7 @@ function run_experiment(opts, arguments)
                     ncomponents=5, ntime=opts["ntime"], model, noise_sd=0.5)
                 smoothed = smooth_bspline(sim.data; nbasis=opts["nbasis"])
                 fpca = FDA.fit(FDA.FPCA,smoothed; method=:dense,basis=:marginal,
-                    ncomponents=opts["components"],maxK=opts["components"])
+                    ncomponents=opts["components"],max_k=opts["components"])
                 bounds = penalty_bounds(smoothed, fpca)
                 empty_graph = falses(opts["p"], opts["p"])
                 complete_graph = trues(opts["p"], opts["p"])

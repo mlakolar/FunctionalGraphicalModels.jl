@@ -71,7 +71,7 @@ end
         values[i,k,s] = 2a[i,k]*sinpi(k*grid[s]) + 0.3b[i,k]*cospi(grid[s])
     end
     data = FunctionalGraphicalModels._dense_data(values,grid)
-    fpca = FDA.fit(FDA.FPCA, data; ncomponents=2, maxK=2, basis=:marginal)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents=2, max_k=2, basis=:marginal)
     fit = functional_neighborhood(data,0.08; ncomponents=2)
     for j in 1:p
         projected = zeros(n,p,2)
@@ -85,7 +85,7 @@ end
     @test size(fit.target_bases) == (t,2,p)
     @test fit.fpca isa FDA.MultivariateFPCA
     @test fit.settings.rule === :or
-    @test all(s -> s.maxK == 2, fit.fpca.settings.node_settings)
+    @test all(s -> s.max_k == 2, fit.fpca.settings.node_settings)
     @test occursin("settings=", sprint(show, fit))
 end
 

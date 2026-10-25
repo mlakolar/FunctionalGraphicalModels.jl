@@ -120,7 +120,7 @@ function _fgm_fold_prediction(data::FDA.MultivariateFunctionalData, training_tim
                               degree::Integer=3, penalty::Real=0)
     ncomponents <= nbasis || throw(ArgumentError("ncomponents must not exceed nbasis"))
     smoothed = _fgm_training_smoother(data, training_times; nbasis, degree, penalty)
-    fpca = FDA.fit(FDA.FPCA, smoothed; basis=:marginal, ncomponents, maxK=ncomponents)
+    fpca = FDA.fit(FDA.FPCA, smoothed; basis=:marginal, ncomponents, max_k=ncomponents)
     reason = _fgm_retained_rank_reason(fpca, ncomponents)
     isempty(reason) || throw(ArgumentError(reason))
     (; prediction=FDA.reconstruct(fpca), smoothed, fpca)
@@ -152,7 +152,7 @@ This chooses `L` and `M`; it does not select the graph regularization penalty.
 Default grids `5:10` and `1:6`, five randomized folds, the current default RNG,
 cubic splines (`degree=3`) and no penalty (`penalty=0`) retain FGM's existing
 choices. The default common grid partition is an FGM implementation choice.
-FDA marginal dense FPCA is fitted at each candidate count with `maxK=M`,
+FDA marginal dense FPCA is fitted at each candidate count with `max_k=M`,
 so the requested fixed count is available up to FGM's `n-1` limit. All other
 FPCA settings use FDA's documented dense defaults and are stored on `fpca`.
 
@@ -209,7 +209,7 @@ function select_fgm_components(data::FDA.MultivariateFunctionalData; nbasis_grid
                     # Fit candidates separately so a rank-deficient larger count
                     # cannot invalidate a smaller, valid candidate.
                     fpca = FDA.fit(FDA.FPCA, smoothed; basis=:marginal,
-                        ncomponents=M, maxK=M)
+                        ncomponents=M, max_k=M)
                     reason = _fgm_retained_rank_reason(fpca, M)
                     isempty(reason) || throw(ArgumentError(reason))
                 catch err

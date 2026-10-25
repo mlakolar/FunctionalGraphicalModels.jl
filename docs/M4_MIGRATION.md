@@ -21,7 +21,7 @@ The audit follow-up continued from **d7840ffa8095040868edc1eabc4dca0e5693408a**.
   response columns. A validation self-test checks independent component
   sign flips, input preservation, and detection of a coefficient change.
 - **F2:** The qiao2019 experiment requests `basis=:marginal` and
-  `maxK=opts["components"]`, matching the package's fixed truncation.
+  `max_k=opts["components"]`, matching the package's fixed truncation.
 - **F3:** CSV provenance appends `+dirty` to the recorded HEAD when tracked
   or untracked working-tree changes exist. Source and worker SHA-256 digests
   still identify the estimator source and exact comparison worker. The CSV
@@ -37,9 +37,9 @@ does not change package estimator code or expected-value tolerances.
 
 1. FDA PR #16 fixed pooled rank upstream. The refreshed FDA `main` is
    **1b75c014778ad374b30fad70fa9083591e1bb546**, source tree
-   `f3e6290f513a5c4350ffa7b184eee62a423518f2`. Its pooled `maxK` default is
+   `f3e6290f513a5c4350ffa7b184eee62a423518f2`. Its pooled `max_k` default is
    `max(1, min(g-2, p*(n-1)-1))`, with explicit cap `min(g, p*(n-1))`.
-   FGM calls FDA's pooled route directly. The existing `maxK=ncomponents`
+   FGM calls FDA's pooled route directly. The existing `max_k=ncomponents`
    requests the caller's fixed truncation, including the structural rank cap;
    there is no local rank workaround or replacement eigenstep. A regression
    fixture now retains four pooled components from two nodes with only three
@@ -101,7 +101,7 @@ Such a case remains an error; no ridge or pseudoinverse was introduced.
   `SparseFunctionalData`, `FPCAResult`, `fit_fpca`, `transform_fpca`,
   `reconstruct`, `SparseFPCAFit`, `fit_sparse_fpca`. The README lists each.
   The exported `quadrature_weights` is now FDA's function.
-- Project sources specify FDA `main` and KernelSmoothing `master`. CI invokes
+- Project sources use sibling FDA and KernelSmoothing `master` checkouts. CI invokes
   `scripts/instantiate.jl`, which resolves KernelSmoothing before FDA in one
   URL-resolution transaction, including on Julia 1.10. ProximalSolvers stays
   transitive. The script restores Project.toml after **all** Pkg operations,
@@ -112,10 +112,10 @@ Such a case remains an error; no ridge or pseudoinverse was introduced.
 
 | Route | Resolved defaults / required choices | Source and reason |
 | --- | --- | --- |
-| Dense FPCA | marginal for glasso/neighborhood/doubly; pooled for separable; explicit integer `ncomponents`, `maxK=ncomponents`; no presmoothing | FGM estimator definitions and caller truncation; explicit maxK avoids FDA's automatic smaller cap |
+| Dense FPCA | marginal for glasso/neighborhood/doubly; pooled for separable; explicit integer `ncomponents`, `max_k=ncomponents`; no presmoothing | FGM estimator definitions and caller truncation; explicit max_k avoids FDA's automatic smaller cap |
 | Dense eigenstep | trapezoidal quadrature; covariance/eigenvalues `n−1`; `eigen_tol=1e-10`, `sign_tol=1e-12`; mean alignment then largest absolute entry | FDA FPCA and multivariate FPCA docstrings, following fdapace 0.6.0 except documented FDA numerical sign/cutoff rules |
 | Sparse PACE | required work grid and bandwidth; marginal PACE; Gaussian kernel, optional Epanechnikov; `weighting=:subj`; same bandwidth for mean, covariance, diagonal; `binning=nothing` | Preserve FGM settings, rather than fdapace automatic bandwidth/binning defaults; kernels map to KernelSmoothing objects |
-| Sparse spectrum | `maxK=length(grid)`, `eigen_tol=100eps(Float64)`, FDA `sign_tol=1e-12`; all retained positive modes in conditional observation covariance | Preserve FGM full-mode conditional-score algorithm and former relative positive-mode cutoff, with FDA signs |
+| Sparse spectrum | `max_k=length(grid)`, `eigen_tol=100eps(Float64)`, FDA `sign_tol=1e-12`; all retained positive modes in conditional observation covariance | Preserve FGM full-mode conditional-score algorithm and former relative positive-mode cutoff, with FDA signs |
 | Sparse noise | `nothing` estimates; supplied nonnegative scalar or vector passes through per node | Existing FGM interface; adopted FDA middle-half integral using the raw smoothed covariance diagonal, as approved above |
 | Score covariance | `center=true`, `corrected=false` (`1/n`) | Existing FGM likelihood scaling; `corrected=true` selects `1/(n−1)` |
 | P-spline | required `nbasis`; degree 3, penalty 0, second coefficient differences, trapezoidal loss | Existing FGM cubic unpenalized defaults; FDA derivative penalty does not reproduce the objective |
@@ -128,7 +128,7 @@ Such a case remains an error; no ridge or pseudoinverse was introduced.
 | Simulation | n 100, p 50, ncomponents 5, ntime 100, model `:ar2`, noise_sd 0.5, random_diagonal_margin 0.1 | Existing FGM generating-design implementation; settings and caller RNG remain explicit |
 
 The migration adds no new automatic tuning. The additional implementation
-choices are explicit maxK overrides, no sparse binning, retention of FGM's
+choices are explicit max_k overrides, no sparse binning, retention of FGM's
 sparse eigenvalue cutoff, per-candidate tuning fits to preserve valid lower
 ranks, and metadata storage. There are no outstanding author decisions.
 The linked external plan was inaccessible through the browser;
@@ -277,7 +277,7 @@ julia +lts --startup-file=no --project=. validation/m4_compare.jl results/m4-aud
 
 The generated table was copied to `validation/m4_comparison.csv` as the final
 tracked artifact update. Its neighborhood settings now show the estimator's
-own `maxK=2`. All previously reported metric cells remain unchanged; the new
+own `max_k=2`. All previously reported metric cells remain unchanged; the new
 coefficient column measures the neighborhood output that was missing before.
 The full-suite, Aqua, Julia-release, and documentation checks remain the
 controller's responsibility.

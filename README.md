@@ -13,7 +13,7 @@ Estimation of Gaussian graphical models for multivariate functional data:
 The package uses current `master` versions of **ProximalBase** and
 **CovarianceSelection**, with **ProximalSolvers** as a transitive dependency,
 and the registered **BSplineKit** for B-spline bases. **FunctionalDataAnalysis**
-(FDA, `main`) supplies data types, trapezoidal quadrature, dense FPCA and PACE.
+(FDA, `master`) supplies data types, trapezoidal quadrature, dense FPCA and PACE.
 **KernelSmoothing** (`master`) supplies PACE kernels. FDA and KernelSmoothing
 must be registered before FGM can be registered.
 
@@ -23,9 +23,10 @@ Julia 1.10 or newer is required. Resolve ecosystem dependencies explicitly:
 
 ```sh
 julia scripts/instantiate.jl
+julia scripts/test_master.jl
 ```
 
-The generated Manifest records exact dependency commits. The setup script
+The generated Manifest uses the sibling master checkouts. The setup script
 preserves the package Project file. For an existing resolved environment,
 `julia --project -e 'using Pkg; Pkg.instantiate()'` reuses its Manifest.
 
@@ -70,7 +71,7 @@ curves = FDA.MultivariateFunctionalData([
     FDA.GridFunctionalData(values[:, j, :], grid) for j in axes(values, 2)
 ])
 values_copy = FDA.to_array(curves)
-fpca = FDA.fit(FDA.FPCA, curves; basis=:marginal, ncomponents=2, maxK=2)
+fpca = FDA.fit(FDA.FPCA, curves; basis=:marginal, ncomponents=2, max_k=2)
 scores = FDA.score_array(fpca)  # subjects × nodes × components
 heldout_scores = FDA.predict(fpca, curves)  # one matrix per node
 reconstructed = FDA.reconstruct(fpca, heldout_scores)

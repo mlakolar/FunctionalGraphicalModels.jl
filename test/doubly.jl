@@ -69,7 +69,7 @@ end
     @test node.settings.diagonal_bandwidth == 0.3
     @test node.settings.weighting == :subj
     @test node.settings.binning === nothing
-    @test node.settings.maxK == length(grid)
+    @test node.settings.max_k == length(grid)
     @test node.settings.eigen_tol == 100eps(Float64)
     @test node.eigenvalues[1] ≈ 1 atol=1e-8
     @test node.basis.values[:,1] ≈ ones(9) atol=1e-8
