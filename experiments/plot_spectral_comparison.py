@@ -1,14 +1,16 @@
 """Plot saved paired reports. Run in the campaign plotting environment under Slurm.
 Usage: python plot_spectral_comparison.py REPORT TIMING OUTPUT
 """
-import csv, pathlib, sys
+import csv, gzip, pathlib, sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 report,timing,out=map(pathlib.Path,sys.argv[1:4]);out.mkdir(exist_ok=False)
 def rows(name):
-    with (report/name).open() as f:return list(csv.DictReader(f))
+    path=report/name
+    source=path.open(newline='') if path.exists() else gzip.open(report/(name+'.gz'),'rt',newline='')
+    with source as f:return list(csv.DictReader(f))
 def save(fig,name):
     fig.savefig(out/(name+'.png'),dpi=170,bbox_inches='tight')
     fig.savefig(out/(name+'.pdf'),bbox_inches='tight');plt.close(fig)
