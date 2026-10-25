@@ -77,6 +77,19 @@ end
 end
 
 include(joinpath(@__DIR__,"..","experiments","dfgm_factorized.jl"))
+# The campaign helpers intentionally preserve FDA's earlier surface-diagonal,
+# middle-half noise estimator. New FDA versions default to rotated/full noise.
+# Compare the same explicit estimator on both sides, retaining old-FDA support.
+function _dfgm_raw_reference_covariance(fd,meanfit;kwargs...)
+    signature=Tuple{Type{FDA.SmoothedCovariance},typeof(fd),typeof(meanfit)}
+    if hasmethod(FDA.fit,signature,(:noise_method,:noise_interval))
+        FDA.fit(FDA.SmoothedCovariance,fd,meanfit;kwargs...,
+            noise_method=:surface_diagonal,noise_interval=:middle_half)
+    else
+        FDA.fit(FDA.SmoothedCovariance,fd,meanfit;kwargs...)
+    end
+end
+
 @testset "Exact irregular factorization against raw FDA fits" begin
     rng=MersenneTwister(710)
     times=[sort!(rand(rng,m)) for m in (4,6,5,7,4,6)]
@@ -87,7 +100,7 @@ include(joinpath(@__DIR__,"..","experiments","dfgm_factorized.jl"))
     meanfit=FDA.fit(FDA.SmoothedMean,fd;grid,bandwidth=.3,kernel,weighting=:subj)
     for bandwidth in (.3,FDA.CurveCV([.2,.4];folds=6))
         factored=_dfgm_factorized_covariance(fd,meanfit,grid;bandwidth)
-        raw=FDA.fit(FDA.SmoothedCovariance,fd,meanfit;grid,bandwidth,kernel,weighting=:subj,binning=nothing)
+        raw=_dfgm_raw_reference_covariance(fd,meanfit;grid,bandwidth,kernel,weighting=:subj,binning=nothing)
         @test factored.surface≈raw.surface atol=1e-10
         @test factored.noise_variance≈raw.noise_variance atol=1e-10
         @test factored.bandwidth==raw.bandwidth
@@ -124,7 +137,7 @@ include(joinpath(@__DIR__,"..","experiments","dfgm_common.jl"))
     meanfit = FDA.fit(FDA.SmoothedMean,fd;grid,bandwidth=.3,kernel,weighting=:subj)
     for bandwidth in (.3,FDA.CurveCV([.2,.4];folds=8))
         compact = _dfgm_common_covariance(fd,meanfit,grid;bandwidth)
-        raw = FDA.fit(FDA.SmoothedCovariance,fd,meanfit;grid,bandwidth,kernel,weighting=:subj,binning=nothing)
+        raw = _dfgm_raw_reference_covariance(fd,meanfit;grid,bandwidth,kernel,weighting=:subj,binning=nothing)
         @test compact.surface ≈ raw.surface atol=1e-10
         @test compact.noise_variance ≈ raw.noise_variance atol=1e-10
         @test compact.bandwidth==raw.bandwidth

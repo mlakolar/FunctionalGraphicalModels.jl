@@ -71,3 +71,16 @@ The full cached pipeline check retains one nonconverged l2 candidate out of
 101. The subsequent failure-accounting gate verifies that it is excluded and
 counted. Production preserves this policy and reports missing candidates and
 invalid positive-definite/BIC selections rather than imputing successful fits.
+
+## FDA default compatibility
+
+The immutable paper campaign retains FDA's earlier surface-diagonal noise
+estimator integrated over the middle half of the domain. Its exact covariance
+aggregation helpers preserve that convention. Current FDA defaults instead
+use a rotated diagonal over the full observed interval. Golden comparisons
+therefore request `noise_method=:surface_diagonal` and
+`noise_interval=:middle_half` explicitly when those keywords are available.
+They retain compatibility with the older locked FDA version and the same
+1e-10 agreement tolerance. A change in upstream defaults must not silently
+change an active numerical campaign. Current-default noise sensitivity is a
+separate source/protocol variant, not a replacement for retained results.
