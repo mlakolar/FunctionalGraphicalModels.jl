@@ -1,0 +1,11 @@
+{
+  "source": "paper-report-v3-source",
+  "archive_sha256": "af12efc12a808097eece55d264043b116867c3e92bd1264877d1f1cc1126ced9",
+  "source_lock_sha256": "7d8716e42baa9e6dc4e1cf3f393a2c46a9382bb61518eb60bdf481b1e15f16ed",
+  "saved_array_check_job": "13423583",
+  "missingness_gate_job": "13423656",
+  "replacement_aggregation_job": "13423668",
+  "replaced_reporter_job": "13423113 cancelled before start; source/submission history retained",
+  "checks": "2946 reduced-canary metric rows independently replayed; BIC maxima delta1.03e-12 and norm delta2.14e-14; exact keys/argmin/ROC;5corruption guards;244available production settings matched locks. No refits.",
+  "primary_run": "1200datasets still running or pending; these are reduced reporting checks, not paper results"
+}

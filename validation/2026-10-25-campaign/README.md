@@ -99,3 +99,18 @@ implementation and shorter wall limits. Running jobs retained their source.
 variants. Canonical dataset links and the aggregation dependency preserve all
 1,200 intended datasets. All four CI platforms passed on436c780 before this
 implementation update; inspect the latest commit's checks separately.
+
+## Reporting replay and missingness [EMPIRICAL]
+
+[Independent saved-array checks](../../docs/REPORTING_CHECKS.md) verified 2,946
+reduced-canary metric rows, with maximum BIC/loss differences 1.03e-12/2.14e-14.
+Exact row coverage, BIC selection and ROC consistency are checked, and five
+corruption/source guards rejected invalid records. All 244 production settings
+available at the checkpoint matched the frozen source/protocol locks.
+
+The [missingness tables](reporting/selection-missingness.csv) retain invalid PD/BIC
+selections separately from solver failures. The reduced irregular canary has
+14/21 missing l2 selections, despite converged fits. This is a coarse canary
+finding, not a paper-study conclusion. [ROC missingness](reporting/roc-missingness.csv)
+also distinguishes incomplete paths and undefined full AUROC. Reporter 13423668
+will apply these checks to the complete campaign and replay two full datasets.

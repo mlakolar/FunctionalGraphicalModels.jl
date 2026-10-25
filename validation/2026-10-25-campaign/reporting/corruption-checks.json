@@ -1,0 +1,7 @@
+{
+  "fixed_count_duplicate_metric": "rejected",
+  "nonminimal_selected_candidate": "rejected",
+  "invented_full_auc": "rejected",
+  "target_dependent_bic": "rejected",
+  "unknown_source_hash": "rejected"
+}
