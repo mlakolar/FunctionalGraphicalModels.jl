@@ -235,7 +235,7 @@ This differs from regressing the separate marginal FPCA scores of each node.
 Tuning is user-supplied; see [`select_neighborhood_scv`](@ref) for Algorithm 2.
 The default OR rule and zero threshold retain FGM's graph convention;
 `center=true` centers scores. Solver defaults are FGM numerical controls.
-The dense route stores the FDA fit, including explicit `maxK=ncomponents`,
+The dense route stores the FDA fit, including explicit `max_k=ncomponents`,
 the `n-1` eigenvalue convention and FDA's sign rule. `settings` stores all
 resolved graph and solver choices.
 
@@ -251,7 +251,7 @@ end
 
 function _neighborhood_target_scores(data::FDA.MultivariateFunctionalData, ncomponents)
     values, grid = _dense_parts(data)
-    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:marginal)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, max_k=ncomponents, basis=:marginal)
     n,p,t = size(values)
     m = ncomponents
     bases = cat((b.values for b in fpca.bases)...; dims=3)

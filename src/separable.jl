@@ -207,14 +207,14 @@ are graphs of the individual projected score vectors; no equivalence to the
 full-process conditional independence graph is asserted.
 The defaults retain FGM's two-component truncation, equal penalty mixture,
 and graph threshold. FDA's pooled FPCA uses `n-1` eigenvalues and explicitly
-sets `maxK=ncomponents`; graph covariance scaling remains `1/n`.
+sets `max_k=ncomponents`; graph covariance scaling remains `1/n`.
 """
 function fit_separable(data::FDA.MultivariateFunctionalData; lambda::Real,
                        alpha::Real=0.5, ncomponents::Integer=2,
                        threshold::Real=1e-6, kwargs...)
     isfinite(threshold) && threshold >= 0 || throw(ArgumentError("threshold must be finite and nonnegative"))
     _dense_parts(data)
-    fpca = FDA.fit(FDA.FPCA, data; ncomponents, maxK=ncomponents, basis=:pooled)
+    fpca = FDA.fit(FDA.FPCA, data; ncomponents, max_k=ncomponents, basis=:pooled)
     scores = FDA.score_array(fpca)
     n, p, m = size(scores)
     correlations = zeros(p, p, m)
