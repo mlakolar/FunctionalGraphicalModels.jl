@@ -37,3 +37,13 @@ report13447865, which filters the method explicitly and checks selected
 metric coverage. The original report and its qualification remain preserved.
 Saved-matrix audit13448207 independently recomputed996 metric/score/selection
 rows across five cases: maximum norm error8.17e-14 and score error7.28e-12.
+
+Run40241273784 on ea10f57 passed4598 checks and failed two estimated-noise
+assertions in the base branch's existing sparse BLUP fixture. All72 spectral
+and all23 adapted covariance checks passed. FDA master added an estimated PACE
+noise floor in f938403 (merged40b7315): max(raw_sigma2,0.025*maximum fitted
+pointwise signal variance). The fixture's raw rotated estimate remains
+0.030864993605724457, while the floor makes the used value0.03745826212492197.
+Merged FGM base40c80c9 and changed the regression check to verify the raw value,
+independently recomputed floor, application flag and actual value reaching the
+conditional-score solve. No scientific campaign source or fit was changed.

@@ -175,12 +175,18 @@ end
     estimated_graph = fit_doubly(data; lambda=0.1, grid=grid,
         ncomponents=1, bandwidth=0.2)
     estimated = FDA.component(estimated_graph.fpca, 1)
-    @test estimated.noise_variance ≈ 0.030864993605722504 rtol=1e-10
     @test estimated.settings.noise_variance_source == :estimated
     raw = estimated.settings.covariance_input
     @test raw.noise_details.noise_method == :rotated
     @test raw.noise_details.noise_interval == :full
-    @test estimated.noise_variance ≈ raw.noise_variance rtol=1e-12
+    @test raw.noise_variance ≈ 0.030864993605722504 rtol=1e-10
+    # FDA now floors estimated PACE noise at 0.025 times its maximum fitted
+    # signal variance. Check both the unchanged raw estimate and the value
+    # actually used by the conditional solve; supplied noise remains unchanged.
+    expected_floor = 0.025 * maximum(diag(estimated.settings.full_projected_covariance))
+    @test estimated.settings.noise_floor ≈ expected_floor rtol=1e-12
+    @test estimated.noise_variance ≈ max(raw.noise_variance,expected_floor) rtol=1e-12
+    @test estimated.settings.noise_floor_applied == (raw.noise_variance < expected_floor)
     # The adopted estimate must also reach the conditional-score solve.
     observation_covariance = H*estimated.settings.full_projected_covariance*H' +
         estimated.noise_variance*I
