@@ -1,0 +1,8 @@
+{
+  "purpose": "Default returned SZ risk plus selected matrix and graph losses for ALL applicable original comparators; source-verified parent receipt; no fits. V1 omitted selected FPR/TPR for five additional scalar comparators, so replace that unstarted aggregate job.",
+  "dependency": "afterok:13447246",
+  "resources": "1CPU8GB1h",
+  "tag": "dfgm-returned-scaled-report-v2",
+  "replaces_prestart_job": "13448938",
+  "source_sha256": "5574a8e2a3e341dbc963fc8eda7259ae85e9556bcf2a2c6809d5e28e99e1f2b8"
+}

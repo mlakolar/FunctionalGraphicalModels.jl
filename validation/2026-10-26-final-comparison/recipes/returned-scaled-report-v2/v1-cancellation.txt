@@ -1,0 +1,2 @@
+JobID|State|Elapsed|ExitCode
+13448938|CANCELLED by 605182|00:00:00|0:0

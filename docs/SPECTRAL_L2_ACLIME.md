@@ -134,3 +134,6 @@ separately. Menu-wide timing ratios are not algorithm-only speedups.
 report adverse outcomes and distinguish pending original baselines from
 new-method selection failures. Frozen parallel aggregate precision clocks
 are qualified; separate controlled benchmarks supply valid wall times.
+
+The [completed paired study](IMPLEMENTATION_COMPARISON_20261026.md) and final
+coverage/failure tables supersede the partial-baseline snapshot for results.

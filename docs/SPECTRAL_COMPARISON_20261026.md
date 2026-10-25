@@ -1,5 +1,7 @@
 # Spectral SOCP comparison: completed new fits, October 26 snapshot
 
+**Historical partial-baseline snapshot.** The [completed comparison](IMPLEMENTATION_COMPARISON_20261026.md) now verifies all original1,200 datasets and all240 paired baselines. The earlier figures and counts below remain a dated record.
+
 **EMPIRICAL.** The new estimator has completed all 240 paired paper datasets
 (first 20 fixed seeds in each of 12 settings) and all 1600 paired controls
 (100 seeds in each of 16 configurations, original160/40 split). The exact grid,

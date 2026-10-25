@@ -1,3 +1,10 @@
+# Completed study update
+
+All original1,200 datasets and all240 paired spectral baselines are now verified.
+See [the final report](../../docs/IMPLEMENTATION_COMPARISON_20261026.md) and
+[final inputs](../2026-10-26-final-comparison/). Earlier pending-baseline
+statements below are historical snapshots, preserved with their source receipts.
+
 # Spectral SOCP implementation checks and pilot
 
 Program(P) is a distinct modification of l2-ACLIME. These are implementation

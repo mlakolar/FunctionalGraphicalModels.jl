@@ -1,0 +1,152 @@
+{
+  "status": "completed",
+  "datasets": 1200,
+  "validated_original_report": {
+    "job_id": "13447246",
+    "report": "/project2/mkolar_1314/FunctionalGraphicalModels/20261025-direct/outputs/paper-v4/reports/report-recovery-13447246-0",
+    "exit_code": 0,
+    "finished_utc": "2026-10-25T23:33:51.915518+00:00",
+    "scope": "Coverage/report validation; published-table replication still requires scientific review"
+  },
+  "applicable_methods": {
+    "1": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "2": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "3": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "4": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "5": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "6": [
+      "DFGM_C",
+      "DFGM_G",
+      "DGM_C",
+      "DGM_G",
+      "GGL",
+      "Naive_C",
+      "Naive_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "7": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "8": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "9": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "10": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "11": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ],
+    "12": [
+      "DFGM_C",
+      "DFGM_G",
+      "aclime",
+      "l2_aclime",
+      "scaled_lasso",
+      "scaled_lasso_tuned"
+    ]
+  },
+  "graph_scope": "Selected FPR/TPR for every applicable original comparator, with replicate-level MCSE and undefined rates retained as missing.",
+  "scope": "All100 default SZ returned matrices per12 paper settings, including finite indefinite matrices. Baseline BIC selections remain separately labeled; ACLIME/l2 use fixedfirst20. No fits or truth tuning.",
+  "actual_target_primary": true,
+  "times_averaged_within_replicate": true,
+  "paired_MCSE": "sample SD of independent replicate differences / sqrt(paired n)",
+  "limitations": [
+    "PD-selected baselines and returned default SZ differ in selection population; paired n remains explicit.",
+    "Undefined graph rates are excluded per quantity, never imputed.",
+    "Default saved fit duration is its original API wall time, not the six-penalty search or an algorithm-only speedup."
+  ],
+  "returned_complete": 1200,
+  "PD_complete": 708,
+  "failed_default_fits": 0
+}

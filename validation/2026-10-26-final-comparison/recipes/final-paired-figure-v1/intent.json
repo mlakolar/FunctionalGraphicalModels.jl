@@ -1,0 +1,7 @@
+{
+  "purpose": "Readable final primary paired accuracy figure against BOTH DFGM_C andDFGM_G. Existing verified contrasts only, nofits.",
+  "resources": "1CPU2GB5min",
+  "tag": "dfgm-final-paired-figure-v1",
+  "validated_source_report": "13447246",
+  "source_sha256": "e5b6feeb23ccc3f2b409de9c41d1e9a3640c4711a8b98f897021fafbcda0375d"
+}
