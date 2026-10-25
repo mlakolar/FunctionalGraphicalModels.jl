@@ -1,0 +1,5 @@
+Found 2 task directories; inspect coverage.csv and per-task fits.csv
+Paired contrasts saved; inspect paired counts and coverage before making comparisons
+Reference contrasts saved; author-manuscript/final-table equality remains unverified
+[{"setting": 1, "replicate": 1, "status": "completed_with_failures", "candidate_fits": 58, "fit_failures": 1, "metric_rows": 1140, "successful_cold_column_restarts": 0}, {"setting": 7, "replicate": 1, "status": "completed", "candidate_fits": 43, "fit_failures": 0, "metric_rows": 1806, "successful_cold_column_restarts": 0}]
+Reporting check passed:162 referencecells,420 pairwisecontrastcells, missingness and originalfailure retained

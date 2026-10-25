@@ -11,7 +11,12 @@
 set -euo pipefail
 module load parallel/20240522
 export JULIA_DEPOT_PATH=/home1/mkolar/juliaPkg/depot:
-export JULIA_NUM_THREADS=1 JULIA_NUM_PRECOMPILE_TASKS=1 JULIA_PKG_PRECOMPILE_AUTO=0
+export DFGM_THREADS_PER_WORKER=${DFGM_THREADS_PER_WORKER:-1}
+[[ $DFGM_THREADS_PER_WORKER =~ ^[0-9]+$ ]] && (( DFGM_THREADS_PER_WORKER > 0 )) || exit 2
+(( DFGM_THREADS_PER_WORKER <= SLURM_CPUS_PER_TASK )) || {
+    echo 'Worker threads exceed CPUs per task' >&2; exit 2;
+}
+export JULIA_NUM_THREADS=$DFGM_THREADS_PER_WORKER JULIA_NUM_GC_THREADS=1 JULIA_NUM_PRECOMPILE_TASKS=1 JULIA_PKG_PRECOMPILE_AUTO=0
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
 source_dir=${1:?source directory required}
 task_file=${2:?task file required}
@@ -39,7 +44,7 @@ fi
 worker_status=0
 parallel --colsep '\t' --jobs "$SLURM_NTASKS" --joblog "$output_dir/parallel.tsv" \
     --halt never \
-    'srun --exclusive --exact -N1 -n1 -c1 --mem="${DFGM_WORKER_MEM_MB}M" bash scripts/dfgm_worker.sh {1} {2} {3} {4} {5} {6} {7} {8}' \
+    'srun --exclusive --exact -N1 -n1 -c"${DFGM_THREADS_PER_WORKER}" --mem="${DFGM_WORKER_MEM_MB}M" bash scripts/dfgm_worker.sh {1} {2} {3} {4} {5} {6} {7} {8}' \
     :::: "$task_file" || worker_status=$?
 python3 experiments/summarize_dfgm.py "$output_dir"
 exit "$worker_status"

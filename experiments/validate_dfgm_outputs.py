@@ -17,7 +17,7 @@ def read_csv(path):
         return list(csv.DictReader(stream))
 
 
-def validate(root):
+def validate(root, *, allow_recorded_fit_failures=False):
     root = pathlib.Path(root)
     tasks = [line.split("\t")[:2] for line in (root / "tasks.tsv").read_text().splitlines() if line]
     checks = []
@@ -33,6 +33,7 @@ def validate(root):
         assert dict(counts) == settings["expected_candidates"], (folder, counts)
         failures = sum(row["status"] != "ok" for row in fits)
         assert failures == receipt["fit_failures"]
+        assert receipt["status"] == ("completed_with_failures" if failures else "completed")
         successful = {(row["method"], row["candidate"]): row for row in fits if row["status"] == "ok"}
         metrics = read_csv(folder / "metrics.csv")
         q = len(settings["evaluation_grid"])
@@ -53,12 +54,20 @@ def validate(root):
                 else:
                     assert float(row["selected_bias_constant"]) == float(successful[method, selected]["bias_constant"])
         assert (folder / "covariances.bin").stat().st_size > 0
+        restarts = read_csv(folder / "numerical-restarts.csv") if (folder / "numerical-restarts.csv").exists() else []
+        if "successful_cold_column_restarts" in receipt:
+            assert sum(int(row["column_restarts"]) for row in restarts) == receipt["successful_cold_column_restarts"]
+            assert all("ALMOST_OPTIMAL" in row["initial_error"] and
+                       row["recovery"] == "independent_cold_OPTIMAL_same_tolerances" for row in restarts)
         checks.append(dict(setting=int(setting), replicate=int(replicate), status=receipt["status"],
-                           candidate_fits=len(fits), fit_failures=failures, metric_rows=len(metrics)))
+                           candidate_fits=len(fits), fit_failures=failures, metric_rows=len(metrics),
+                           successful_cold_column_restarts=receipt.get("successful_cold_column_restarts", 0)))
     (root / "validation.json").write_text(json.dumps(checks, indent=2) + "\n")
     print(json.dumps(checks))
-    return all(row["status"] == "completed" and row["fit_failures"] == 0 for row in checks)
+    return all(row["status"] in ("completed", "completed_with_failures") and
+               (allow_recorded_fit_failures or row["fit_failures"] == 0) for row in checks)
 
 
 if __name__ == "__main__":
-    sys.exit(0 if validate(sys.argv[1]) else 1)
+    sys.exit(0 if validate(sys.argv[1],
+        allow_recorded_fit_failures="--allow-recorded-fit-failures" in sys.argv[2:]) else 1)

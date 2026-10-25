@@ -20,7 +20,8 @@ export quadrature_weights, score_covariance, smooth_bspline,
        JointGraphicalLassoFit, joint_graphical_lasso, SeparableFit, fit_separable,
        simulate_qiao2019, graph_metrics, FGMComponentSelection, select_fgm_components
 export DirectCovariance, DirectPrecisionFit, direct_covariance, fit_direct,
-       bias_aclime, interval_symmetrize, simulate_dfgm2020, dfgm2020_settings
+       bias_aclime, interval_symmetrize, simulate_dfgm2020, dfgm2020_settings,
+       bias_aclime_path, fit_direct_path
 
 include("data.jl")
 include("tuning.jl")
@@ -30,6 +31,7 @@ include("doubly.jl")
 include("separable.jl")
 include("simulation.jl")
 include("direct.jl")
+include("direct_path.jl")
 include("dfgm_simulation.jl")
 
 end

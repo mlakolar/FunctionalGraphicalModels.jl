@@ -1,0 +1,2 @@
+4510 package checks; covariance/path threading checks;100 accepted fits and1 excluded failed fit preserved
+[{"setting": 1, "replicate": 1, "status": "completed_with_failures", "candidate_fits": 58, "fit_failures": 1, "metric_rows": 1140, "successful_cold_column_restarts": 0}, {"setting": 7, "replicate": 1, "status": "completed", "candidate_fits": 43, "fit_failures": 0, "metric_rows": 1806, "successful_cold_column_restarts": 0}]

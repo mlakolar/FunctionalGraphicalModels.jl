@@ -15,5 +15,6 @@ import FunctionalDataAnalysis as FDA
     include("separable.jl")
     include("simulation.jl")
     include("direct.jl")
+    include("direct_path.jl")
     Aqua.test_all(FunctionalGraphicalModels)
 end

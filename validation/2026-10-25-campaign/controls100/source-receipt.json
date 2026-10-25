@@ -1,0 +1,26 @@
+{
+  "source_snapshot": "production-v1-source",
+  "publication_base": "578fc1ddba80fd221d438c67f36e16029b3fe653",
+  "sha256": {
+    "experiments/direct_stress.jl": "e4ab118e9fa2780cb096d9d453f3e518dd32cb1027c142e3687c1704e8f6f0ff",
+    "experiments/scaled_lasso_calibration.jl": "de19c46bc8098f117cb5037cecf3594571a17a174958a813886c83b61031975d",
+    "src/direct.jl": "594d41a41689377528ecd843c14ea8257f140a1996fdb1e1fdd28c53d2ec3e00",
+    "Manifest.toml": "b3c2e4c3d606a301e65429c19c00a6b41ae664a12f41626c59e8b92e27a4de5e"
+  },
+  "producer_jobs": [
+    "13414835",
+    "13414836"
+  ],
+  "report_jobs": [
+    "13422502",
+    "13422680"
+  ],
+  "datasets": 1600,
+  "replicates_per_configuration": 100,
+  "main_fits": 11200,
+  "scaled_calibration_fits": 9600,
+  "fit_failures": 0,
+  "seed_recipe": "2026102500 +10000*configuration +replicate",
+  "split": "subjects1:160 train,161:200 validation; identical replay seed/draw recipe",
+  "interpretation": "Known-target controls with a known bias envelope; not the Biometrika12-setting study"
+}

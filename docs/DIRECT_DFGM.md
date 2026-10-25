@@ -162,6 +162,10 @@ l2  = fit_direct(C; method=:l2_aclime, pilot_index=2, bias_constant=Lop)
 sl  = fit_direct(C; method=:scaled_lasso, pilot_index=2, bias_constant=Lop)
 ```
 
+For a finite K2 menu, `fit_direct_path` reuses pilot/model work and can solve
+independent time points with private threaded models. Inspect its `errors`
+and skip `nothing` fits. See [the path API and validation](DIRECT_PATH.md).
+
 The illustrative grid above is interior only if every width stays in the
 declared sampling domain. L and Lop denote actual valid envelopes, including
 kernel constants; the API cannot infer their validity from observations.

@@ -5,6 +5,7 @@ import KernelSmoothing
 import CovarianceSelection
 include("dfgm_common.jl")
 include("dfgm_factorized.jl")
+include("dfgm_cache.jl")
 
 function option(name,default)
     i = findfirst(==("--"*name),ARGS)
@@ -34,13 +35,10 @@ function sample_covariances(data,grid)
     S
 end
 
-function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_points=31)
-    n,p = FDA.nobs(data),FDA.ncomponents(data)
-    workgrid = sort!(unique(vcat(collect(range(0,1;length=work_points)),grid)))
-    X = zeros(n,p,length(grid))
-    selections = NamedTuple[]
+function _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,indices,mode,bandwidth)
+    n=FDA.nobs(data)
     cv_cache = Dict()
-    for j in 1:p
+    for j in indices
         fd = FDA.component(data,j)
         selector = mode===:paper ? FDA.CurveCV([.1,.2,.3,.4];folds=n) : bandwidth
         # This is the literal whole-curve CV path. It can be expensive; pilot
@@ -60,7 +58,21 @@ function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_poin
         end
         basis = FDA.basismatrix(fp.basis,grid)
         X[:,j,:] .= fp.scores*transpose(basis)
-        push!(selections,(;node=j,rank=length(fp.eigenvalues),settings=fp.settings))
+        selections[j]=(;node=j,rank=length(fp.eigenvalues),settings=fp.settings)
+    end
+end
+
+function reconstructed_covariances(data,grid;mode=:pilot,bandwidth=.25,work_points=31,ntasks=1)
+    1<=ntasks<=Threads.nthreads() || error("reconstruction ntasks exceeds Julia threads")
+    n,p = FDA.nobs(data),FDA.ncomponents(data)
+    workgrid = sort!(unique(vcat(collect(range(0,1;length=work_points)),grid)))
+    X = zeros(n,p,length(grid)); selections=Vector{NamedTuple}(undef,p)
+    if ntasks==1
+        _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,1:p,mode,bandwidth)
+    else
+        Threads.@threads for task in 1:ntasks
+            _dfgm_reconstruct_partition!(X,selections,data,grid,workgrid,task:ntasks:p,mode,bandwidth)
+        end
     end
     S = zeros(p,p,length(grid))
     for t in eachindex(grid)
@@ -119,7 +131,9 @@ end
 
 function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=0,
                 integration_points=101,nlambda=7,work_points=31,evaluation_points=0,
-                bias_constant=1.,bias_constants=nothing,lp_solver=:highs)
+                bias_constant=1.,bias_constants=nothing,lp_solver=:highs,
+                path_reuse=false,covariance_cache="",ntasks=1)
+    1<=ntasks<=Threads.nthreads() || error("worker ntasks exceeds Julia threads")
     mkpath(out)
     done = joinpath(out,"complete.toml")
     (isfile(done)||isfile(joinpath(out,"settings.toml"))) &&
@@ -131,12 +145,22 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     effective_n = n_override>0 ? n_override : setting.n
     effective_p = p_override>0 ? p_override : setting.p
     grid_override = evaluation_points>0 ? collect(range(0,1;length=evaluation_points)) : nothing
-    sim = simulate_dfgm2020(rng;p=effective_p,n=effective_n,design=setting.design,
-        schedule=setting.schedule,integration_points,evaluation_grid=grid_override)
+    reused=isempty(covariance_cache) ? nothing : load_dfgm_covariance_cache(covariance_cache;
+        setting_index,replicate,seed,n=effective_n,p=effective_p,design=setting.design,
+        schedule=setting.schedule,mode,integration_points,work_points)
+    reused!==nothing && evaluation_points>0 && error("cache reuse requires the saved evaluation grid")
+    sim = if reused===nothing
+        simulate_dfgm2020(rng;p=effective_p,n=effective_n,design=setting.design,
+            schedule=setting.schedule,integration_points,evaluation_grid=grid_override)
+    else
+        targets=reused.targets
+        (;data=nothing,grid=targets.grid,precision=targets.actual,
+            nominal_precision=targets.nominal,graph=targets.graph)
+    end
     println("generated setting=$setting_index p=$effective_p n=$effective_n seconds=$(time()-started)");flush(stdout)
     # Common methods use actual common observations, irrespective of a reduced
     # evaluation grid. For paper settings evaluation is the observation grid.
-    obsgrid = sim.data.components[1][1][1]
+    obsgrid = reused===nothing ? sim.data.components[1][1][1] : sim.grid
     if setting.design===:common && evaluation_points>0
         error("reduced evaluation grids are supported only for irregular pilots")
     end
@@ -152,9 +176,9 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         error("bias constants must be distinct, positive and finite")
     direct_candidates = [(;K2,bias_constant=b) for b in bias_menu for K2 in multipliers]
     hs = [.15,.25,.4]
-    C = direct_covariance(sim.data,sim.grid;bandwidths=hs,
+    C = reused===nothing ? direct_covariance(sim.data,sim.grid;bandwidths=hs,
         design=setting.design===:common ? :stratified_synchronous : :independent,
-        boundary=:local_linear)
+        boundary=:local_linear) : reused.covariance.direct
     # Retain the original default separately. This empirical menu addresses
     # the observed sensitivity to sparse-visit covariance error. Paper-mode
     # selection uses the same observable pointwise BIC as the other paths;
@@ -174,6 +198,10 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "scalar_penalties"=>penalties,"bias_constant"=>bias_constant,"lp_solver"=>string(lp_solver),"threshold"=>THRESHOLD,
         "bias_constant_menu"=>bias_menu,
         "direct_selection"=>"pointwise BIC across bias/K2 menu; empirical when envelope not externally certified",
+        "path_reuse"=>path_reuse,
+        "threads_per_worker"=>ntasks,
+        "restart_policy"=>"one fresh column solve after ALMOST_OPTIMAL; fixed pilot and unchanged tolerances; preserve original outcome",
+        "direct_candidate_seconds"=>path_reuse ? "amortized equally within each shared bias/K2 path" : "independent cold fit",
         "expected_candidates"=>Dict(string(m)=>expected_candidates(m) for m in methods),
         "noise_variance"=>.5,"julia_version"=>string(VERSION),
         "scaled_lasso_penalty_menu"=>string.(scaled_values),
@@ -183,10 +211,11 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "truth_selection"=>"no_truth_used_for_tuning",
         "source_sha256"=>Dict(f=>bytes2hex(sha256(read(joinpath(@__DIR__,"..",f))))
             for f in ("Project.toml","src/FunctionalGraphicalModels.jl","src/direct.jl",
-                "src/dfgm_simulation.jl","experiments/dfgm2020.jl",
-                "experiments/dfgm_common.jl","experiments/dfgm_factorized.jl")))
+                "src/direct_path.jl","src/dfgm_simulation.jl","experiments/dfgm2020.jl",
+                "experiments/dfgm_common.jl","experiments/dfgm_factorized.jl","experiments/dfgm_cache.jl")))
     manifest=joinpath(@__DIR__,"..","Manifest.toml")
     settings["dependency_manifest_sha256"]=isfile(manifest) ? bytes2hex(sha256(read(manifest))) : "not_saved"
+    reused===nothing || (settings["covariance_cache"]=Dict(string(k)=>v for (k,v) in pairs(reused.receipt)))
     open(joinpath(out,"settings.toml"),"w") do io; TOML.print(io,settings); end
     # Keep paired reporting inputs; no raw simulated data are needed to recreate.
     serialize(joinpath(out,"targets.bin"),(;grid=sim.grid,actual=sim.precision,
@@ -198,18 +227,26 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     end
     paths = Dict{Symbol,Vector{Tuple{Int,Array{Float64,3}}}}(m=>[] for m in methods)
     failures = 0
+    numerical_restarts=0
     Srecon = nothing
     reconstruction_error = ""
-    try
-        Srecon,selections = reconstructed_covariances(sim.data,sim.grid;mode,work_points)
-        serialize(joinpath(out,"fpca_selections.bin"),selections)
-    catch e
-        reconstruction_error = sprint(showerror,e,catch_backtrace())
+    if reused===nothing
+        try
+            Srecon,selections = reconstructed_covariances(sim.data,sim.grid;mode,work_points,ntasks)
+            serialize(joinpath(out,"fpca_selections.bin"),selections)
+        catch e
+            reconstruction_error = sprint(showerror,e,catch_backtrace())
+        end
+    else
+        Srecon=reused.covariance.reconstructed
+        selection_path=joinpath(covariance_cache,"fpca_selections.bin")
+        isfile(selection_path) && cp(selection_path,joinpath(out,"fpca_selections.bin"))
     end
     println("FPCA ready success=$(Srecon!==nothing) seconds=$(time()-started)");flush(stdout)
-    Sraw = setting.design===:common ? sample_covariances(sim.data,obsgrid) : nothing
-    Sdgm = nothing
-    if Sraw!==nothing
+    Sraw = reused!==nothing ? reused.covariance.raw :
+        setting.design===:common ? sample_covariances(sim.data,obsgrid) : nothing
+    Sdgm = reused===nothing ? nothing : reused.covariance.dynamic
+    if reused===nothing && Sraw!==nothing
         T = length(obsgrid)
         h = max((log(effective_p)/(effective_n*T))^(1/3),T^(-4/5))
         Sdgm = similar(Sraw)
@@ -222,10 +259,59 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     # sensitivity analyses. Their source, subjects and seeds are in settings.
     serialize(joinpath(out,"covariances.bin"),(;grid=sim.grid,direct=C,
         reconstructed=Srecon,raw=Sraw,dynamic=Sdgm))
+    open(joinpath(out,"numerical-restarts.csv"),"w") do io
+        row(io,"method","candidate","time_index","initial_error","recovery","column_restarts")
+    end
     open(joinpath(out,"fits.csv"),"w") do io
         row(io,"method","candidate","penalty","bias_constant","status","seconds","pd_slices","max_constraint_violation","psd_displacement","error")
         for method in methods
             println("starting $method seconds=$(time()-started)");flush(stdout)
+            if path_reuse && method in (:aclime,:l2_aclime)
+                for (group,bvalue) in enumerate(bias_menu)
+                    tick=time()
+                    result=try
+                        fit_direct_path(C,multipliers;method,pilot_index=2,bias_constant=bvalue,
+                            noise_variance=.5,lp_solver,ntasks)
+                    catch exception
+                        (;fits=fill(nothing,nlambda),errors=fill(sprint(showerror,exception),nlambda))
+                    end
+                    seconds=(time()-tick)/nlambda
+                    saved=Tuple{Int,Array{Float64,3}}[]
+                    for index in 1:nlambda
+                        candidate=(group-1)*nlambda+index
+                        f=result.fits[index]
+                        if f===nothing
+                            failures+=1
+                            row(io,method,candidate,multipliers[index],bvalue,"failed",seconds,
+                                0,NaN,NaN,result.errors[index])
+                        else
+                            P=f.precisions
+                            pd=count(t->isposdef(Symmetric(P[:,:,t])),axes(P,3))
+                            violation=maximum(d.max_constraint_violation for d in f.diagnostics)
+                            open(joinpath(out,"numerical-restarts.csv"),"a") do restarts
+                                for (time_index,diagnostic) in enumerate(f.diagnostics)
+                                    if !isempty(diagnostic.cold_restart_reason)
+                                        row(restarts,method,candidate,time_index,
+                                            diagnostic.cold_restart_reason,"independent_cold_OPTIMAL_same_tolerances",
+                                            diagnostic.cold_restart_count)
+                                        numerical_restarts+=diagnostic.cold_restart_count
+                                    end
+                                end
+                            end
+                            row(io,method,candidate,multipliers[index],bvalue,"ok",seconds,pd,violation,0.,"")
+                            push!(paths[method],(candidate,P));push!(saved,(candidate,P))
+                        end
+                    end
+                    # Each completed bias block survives a later wall limit.
+                    serialize(joinpath(out,"checkpoint-$(method)-bias-$(group).bin"),
+                        (;method,bias_constant=bvalue,candidates=saved,errors=result.errors))
+                    println("path method=$method bias=$bvalue seconds=$(time()-tick) failures=$(count(!isempty,result.errors))")
+                    flush(stdout)
+                    result=nothing
+                    GC.gc(false)
+                end
+                continue
+            end
             for candidate in 1:expected_candidates(method)
                 tick = time()
                 scaled = method in (:scaled_lasso,:scaled_lasso_tuned)
@@ -327,6 +413,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     open(done,"w") do io
         TOML.print(io,Dict("status"=>failures==0 ? "completed" : "completed_with_failures",
             "fit_failures"=>failures,"elapsed_seconds"=>time()-started,
+            "successful_cold_column_restarts"=>numerical_restarts,
             "paper_reproduction"=>false,"mode"=>string(mode)))
     end
     println("setting=$setting_index replicate=$replicate failures=$failures seconds=$(time()-started)")
@@ -344,6 +431,7 @@ if abspath(PROGRAM_FILE)==@__FILE__
         evaluation_points=parse(Int,option("evaluation-points","0")),
         bias_constant=parse(Float64,option("bias-constant","1")),
         bias_constants=let value=option("bias-constants",""); isempty(value) ? nothing : parse.(Float64,split(value,',')); end,
-        lp_solver=Symbol(option("lp-solver","highs")))
+        lp_solver=Symbol(option("lp-solver","highs")),path_reuse=option("path-reuse","0")=="1",
+        covariance_cache=option("covariance-cache",""),ntasks=parse(Int,option("ntasks","1")))
     exit(ok ? 0 : 1)
 end
