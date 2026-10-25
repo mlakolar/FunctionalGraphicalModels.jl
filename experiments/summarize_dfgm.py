@@ -10,10 +10,12 @@ import statistics
 import sys
 import tomllib
 from collections import defaultdict
+from dfgm_scope import included, load_scope
 
 
 def main(root):
     root = pathlib.Path(root)
+    scope = load_scope(root)
     groups = defaultdict(list)
     coverage = []
     task_table = root / "tasks.tsv"
@@ -39,12 +41,16 @@ def main(root):
         values = defaultdict(list)
         with (folder / "metrics.csv").open(newline="") as f:
             for r in csv.DictReader(f):
+                if not included(scope, r["method"], s["replicate"]):
+                    continue
                 if selected.get((r["method"], r["time_index"])) != r["candidate"]:
                     continue
                 for loss in ("operator", "frobenius", "normalized_squared_frobenius"):
                     values[r["method"], r["target"], loss].append(float(r[loss]))
         with (folder / "auc.csv").open(newline="") as f:
             for r in csv.DictReader(f):
+                if not included(scope, r["method"], s["replicate"]):
+                    continue
                 values[r["method"], r["target"], "full_auc"].append(float(r["full_auc"]))
                 area, lo, hi = (float(r[k]) for k in ("observed_area", "minimum_fpr", "maximum_fpr"))
                 complete = r["successful_candidates"] == r["expected_candidates"]

@@ -362,3 +362,8 @@ covariance inputs are retained in `covariances.bin` for later sensitivity work.
 - [Clarabel settings](https://clarabel.org/stable/api_settings/) and
   [JuMP conic constraints](https://jump.dev/JuMP.jl/stable/manual/constraints/),
   [HiGHS interface](https://jump.dev/JuMP.jl/stable/packages/HiGHS/).
+
+The [25 October scope amendment](COMPARISON_SCOPE_20261025.md) sets primary
+proposal coverage to the first20 fixed seeds per setting, with all100 for scaled
+lasso and original comparators. `--method-subset scaled_original` skips only
+our two proposals; completed extra outputs remain retained outside primary means.

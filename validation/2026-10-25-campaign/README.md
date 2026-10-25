@@ -4,6 +4,10 @@
 on Discovery. Full published-table replication is not yet established.
 See [the protocol](../../docs/CAMPAIGN_20261025.md).
 
+The [authorized scope amendment](../../docs/COMPARISON_SCOPE_20261025.md)
+retains the first20 fixed seeds per setting for our two proposals and all100
+for scaled lasso and original comparators. All completed extra fits are preserved.
+
 ## Completed controls [EMPIRICAL]
 
 The sixteen known-target configurations have **100 paired replicates each**:

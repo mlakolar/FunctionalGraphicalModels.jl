@@ -11,10 +11,12 @@ import statistics
 import sys
 import tomllib
 from collections import defaultdict
+from dfgm_scope import included, load_scope
 
 
 def main(root):
     root = pathlib.Path(root)
+    scope = load_scope(root)
     expected = defaultdict(set)
     available = defaultdict(dict)
     applicable = defaultdict(set)
@@ -31,6 +33,8 @@ def main(root):
         values = defaultdict(list)
         with (folder / "metrics.csv").open(newline="") as stream:
             for row in csv.DictReader(stream):
+                if not included(scope, row["method"], replicate):
+                    continue
                 if selected.get((row["method"], row["time_index"])) != row["candidate"]:
                     continue
                 for quantity in ("operator", "frobenius", "normalized_squared_frobenius"):
@@ -48,12 +52,14 @@ def main(root):
                     for quantity in ("operator", "frobenius", "normalized_squared_frobenius"):
                         a = available[setting, first, target, quantity]
                         b = available[setting, second, target, quantity]
-                        pairs = sorted(a.keys() & b.keys())
+                        intended = {r for r in expected[setting]
+                                    if included(scope, first, r) and included(scope, second, r)}
+                        pairs = sorted(a.keys() & b.keys() & intended)
                         differences = [a[r] - b[r] for r in pairs]
                         mean = statistics.mean(differences) if differences else math.nan
                         se = statistics.stdev(differences) / math.sqrt(len(differences)) if len(differences) > 1 else math.nan
-                        writer.writerow((setting, first, second, target, quantity, len(expected[setting]),
-                                         len(a), len(b), len(pairs), mean, se))
+                        writer.writerow((setting, first, second, target, quantity, len(intended),
+                                         len(a.keys() & intended), len(b.keys() & intended), len(pairs), mean, se))
     print("Paired contrasts saved; inspect paired counts and coverage before making comparisons")
 
 

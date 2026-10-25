@@ -10,10 +10,12 @@ import pathlib
 import sys
 import tomllib
 from collections import Counter, defaultdict
+from dfgm_scope import included, load_scope
 
 
 def main(root):
     root = pathlib.Path(root)
+    scope = load_scope(root)
     checks = {(r["setting"], r["replicate"]): r
               for r in json.loads((root / "validation.json").read_text())}
     totals = defaultdict(Counter)
@@ -23,6 +25,7 @@ def main(root):
     for line in (root / "tasks.tsv").read_text().splitlines():
         setting, replicate = map(int, line.split("\t")[:2])
         methods = common if setting <= 6 else common[:6]
+        methods = tuple(m for m in methods if included(scope, m, replicate))
         check = checks[setting, replicate]
         for method in methods:
             totals[setting, method]["intended_replicates"] += 1

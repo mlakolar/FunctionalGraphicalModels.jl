@@ -6,6 +6,9 @@ out="$DFGM_OUTPUT_DIR/setting-$setting-rep-$replicate"
 mkdir -p "$out"
 printf 'job=%s step=%s\n' "$SLURM_JOB_ID" "$SLURM_STEP_ID" >"$out/step.txt"
 extra=()
+if [[ ${DFGM_METHOD_SUBSET:-all} != all ]]; then
+    extra+=(--method-subset "$DFGM_METHOD_SUBSET")
+fi
 if [[ ${DFGM_COMMON_FAST:-0} == 1 ]]; then
     extra+=(--common-fast 1)
 fi
@@ -19,7 +22,7 @@ fi
 if [[ -n ${DFGM_BIAS_CONSTANTS:-} ]]; then
     extra+=(--bias-constants "$DFGM_BIAS_CONSTANTS")
 fi
-exec /home1/mkolar/juliaPkg/julia-1.13.2/bin/julia --project="$DFGM_SOURCE_DIR" \
+exec /home1/mkolar/juliaPkg/julia-1.13.2/bin/julia --project="${DFGM_RUNTIME_PROJECT:-$DFGM_SOURCE_DIR}" \
     "$DFGM_SOURCE_DIR/experiments/dfgm2020.jl" --setting "$setting" --replicate "$replicate" \
     --mode "$mode" --n "$n" --p "$p" --integration-points "$integration_points" \
     --nlambda "$nlambda" --work-points "$work_points" --bias-constant "${DFGM_BIAS_CONSTANT:-1}" \

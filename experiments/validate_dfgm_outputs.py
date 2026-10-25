@@ -46,7 +46,8 @@ def source_settings(settings, locks):
     assert settings["mode"] == "paper" and settings["integration_points"] == 101
     assert settings["work_points"] == 31 and settings["noise_variance"] == .5
     assert settings["path_reuse"] and settings["threads_per_worker"] == 4
-    assert settings.get("common_fast", False) == variant["common_fast"]
+    expected_fast = setting <= 6 if variant.get("common_fast_by_design") else variant["common_fast"]
+    assert settings.get("common_fast", False) == expected_fast
     assert settings["bias_constant_menu"] == [.01, .1, 1., 10., 20.]
     assert len(settings["K2_menu"]) == 31
     assert near(settings["K2_menu"][0], .03) and near(settings["K2_menu"][-1], 2.)
@@ -59,6 +60,12 @@ def source_settings(settings, locks):
               "scaled_lasso_tuned": 6, "DFGM_C": 31, "DFGM_G": 31}
     if setting <= 6:
         counts.update({m: 31 for m in ("DGM_C", "DGM_G", "GGL", "Naive_C", "Naive_G")})
+    subset = settings.get("method_subset", "all")
+    assert subset == variant.get("method_subset", "all")
+    if subset == "scaled_original":
+        assert replicate > 20, "retained first20 must contain both proposals"
+        counts.pop("aclime")
+        counts.pop("l2_aclime")
     assert settings["expected_candidates"] == counts
     return variant["name"]
 

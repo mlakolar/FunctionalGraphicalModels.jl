@@ -136,7 +136,9 @@ end
 function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=0,
                 integration_points=101,nlambda=7,work_points=31,evaluation_points=0,
                 bias_constant=1.,bias_constants=nothing,lp_solver=:highs,
-                path_reuse=false,covariance_cache="",ntasks=1,common_fast=false)
+                path_reuse=false,covariance_cache="",ntasks=1,common_fast=false,
+                method_subset=:all)
+    method_subset in (:all,:scaled_original) || error("unknown method subset")
     1<=ntasks<=Threads.nthreads() || error("worker ntasks exceeds Julia threads")
     mkpath(out)
     done = joinpath(out,"complete.toml")
@@ -190,6 +192,9 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
     scaled_values = Any[:quantile,.2,.35,.5,.75,
         sqrt(2log(effective_p)/effective_n)*(1+1/(C.min_visits*hs[2]))]
     push!(methods,:scaled_lasso_tuned)
+    if method_subset===:scaled_original
+        filter!(m->!(m in (:aclime,:l2_aclime)),methods)
+    end
     expected_candidates(method) = method===:scaled_lasso ? 1 :
         method===:scaled_lasso_tuned ? length(scaled_values) :
         method in (:aclime,:l2_aclime) ? length(direct_candidates) : nlambda
@@ -205,6 +210,7 @@ function worker(setting_index,replicate,out;mode=:pilot,n_override=0,p_override=
         "path_reuse"=>path_reuse,
         "threads_per_worker"=>ntasks,
         "common_fast"=>common_fast,
+        "method_subset"=>string(method_subset),
         "restart_policy"=>"one fresh column solve after ALMOST_OPTIMAL; fixed pilot and unchanged tolerances; preserve original outcome",
         "direct_candidate_seconds"=>path_reuse ? "amortized equally within each shared bias/K2 path" : "independent cold fit",
         "expected_candidates"=>Dict(string(m)=>expected_candidates(m) for m in methods),
@@ -439,6 +445,7 @@ if abspath(PROGRAM_FILE)==@__FILE__
         bias_constants=let value=option("bias-constants",""); isempty(value) ? nothing : parse.(Float64,split(value,',')); end,
         lp_solver=Symbol(option("lp-solver","highs")),path_reuse=option("path-reuse","0")=="1",
         covariance_cache=option("covariance-cache",""),ntasks=parse(Int,option("ntasks","1")),
-        common_fast=option("common-fast","0")=="1")
+        common_fast=option("common-fast","0")=="1",
+        method_subset=Symbol(option("method-subset","all")))
     exit(ok ? 0 : 1)
 end
