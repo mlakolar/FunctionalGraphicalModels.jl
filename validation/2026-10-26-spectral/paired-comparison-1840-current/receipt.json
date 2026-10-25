@@ -1,0 +1,136 @@
+{
+  "datasets": 1840,
+  "intended": 1840,
+  "overall_study_intended": 1840,
+  "interim_paper50_controls": false,
+  "cohorts": [
+    [
+      "paper",
+      1
+    ],
+    [
+      "paper",
+      2
+    ],
+    [
+      "paper",
+      3
+    ],
+    [
+      "paper",
+      4
+    ],
+    [
+      "paper",
+      5
+    ],
+    [
+      "paper",
+      6
+    ],
+    [
+      "paper",
+      7
+    ],
+    [
+      "paper",
+      8
+    ],
+    [
+      "paper",
+      9
+    ],
+    [
+      "paper",
+      10
+    ],
+    [
+      "paper",
+      11
+    ],
+    [
+      "paper",
+      12
+    ],
+    [
+      "control",
+      1
+    ],
+    [
+      "control",
+      2
+    ],
+    [
+      "control",
+      3
+    ],
+    [
+      "control",
+      4
+    ],
+    [
+      "control",
+      5
+    ],
+    [
+      "control",
+      6
+    ],
+    [
+      "control",
+      7
+    ],
+    [
+      "control",
+      8
+    ],
+    [
+      "control",
+      9
+    ],
+    [
+      "control",
+      10
+    ],
+    [
+      "control",
+      11
+    ],
+    [
+      "control",
+      12
+    ],
+    [
+      "control",
+      13
+    ],
+    [
+      "control",
+      14
+    ],
+    [
+      "control",
+      15
+    ],
+    [
+      "control",
+      16
+    ]
+  ],
+  "completed": 1840,
+  "objective": "Compare our implementations; actual precision primary, no published-table reproduction objective.",
+  "scope": "Paper12x20, controls16x100; times averaged within independent seeds before MCSE. No baseline fits repeated.",
+  "populations": {
+    "spectral_l2_aclime": "fixed Kscore2 returned optimal finite matrices, regardless PD",
+    "spectral_l2_aclime_PD": "same fixed matrices after PD screening",
+    "spectral_l2_aclime_tuned": "six-score BIC selection for paper, heldout residual for controls",
+    "scaled_lasso_returned": "fixed default SZ before PD screening, paper only",
+    "other_paper_baselines": "existing stored BIC selections"
+  },
+  "limitations": [
+    "Control baseline graph and PD properties were not saved; marked unavailable, no refits.",
+    "Paired complete cases can be selective. Empirical constants do not certify theorem assumptions.",
+    "Frozen v4/v5 parallel aggregate precision wall/path clocks are unreliable; their recorded values are explicitly labeled. Per-column model/solve/residual and covariance/scoring timings remain valid. Use the separate controlled timing experiment for wall-time comparisons.",
+    "Shared menus/stages cannot be called algorithm-only speedups."
+  ]
+}

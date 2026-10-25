@@ -16,7 +16,12 @@ checks and cost/identity evidence, not a full paired comparison or a theorem.
   feasibility example used incompatible matrices at two widths. The corrected
   compatible indefinite example passed in13446367. Original logs are retained.
 
-Full paired paper/control comparisons are still running. See
+All240 new paper and1600 new control datasets are complete and independently
+checked, with infeasible and numerical candidate outcomes preserved. The
+[dated comparison report](../../docs/SPECTRAL_COMPARISON_20261026.md) includes
+paired MCSE, norm/graph/PD/selection/ROC coverage, failures, controlled timing
+and inspected figures. It still lacks17 baseline outputs in setting6; the
+original recovery jobs remain active. This is not final completion. See
 [protocol](../../docs/SPECTRAL_L2_ACLIME.md) for prespecified constants and scopes.
 Source manifests identify every frozen variant; original baseline sources and
 fits are preserved. Paper calibration constants are empirical sensitivity inputs.

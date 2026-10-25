@@ -122,3 +122,8 @@ before paired differences and MCSE. Report all three matrix losses, graph
 recovery, and runtime stages. Per-candidate precision fitting, model reuse,
 symmetrization, calibration, covariance construction and scoring are recorded
 separately. Menu-wide timing ratios are not algorithm-only speedups.
+
+[Completed new-method fits and dated paired results](SPECTRAL_COMPARISON_20261026.md)
+report adverse outcomes and distinguish pending original baselines from
+new-method selection failures. Frozen parallel aggregate precision clocks
+are qualified; separate controlled benchmarks supply valid wall times.
