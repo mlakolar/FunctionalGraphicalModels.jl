@@ -1,0 +1,22 @@
+{
+  "numerical_source": "spectral-20261026-v5-source",
+  "files": {
+    "spectral_batch.jl": "3dc4b15f98aa3c3ac948a6a4f54a0e33f2cba6d6f9212f6da3b9e61949005215",
+    "control-worker.sh": "0da1fd2ba9a628dd0a7937b56a362a9ae3417deb7b6ff14c8af34b4bcf4a179b",
+    "paper-worker.sh": "25a233aa64b2c5218fd09dd7bbdd06bc75e30e2ead627af49a7fd20c53423075",
+    "controls.sbatch": "85af569987442c2d29c4a739f9921792968a8325515bede09fd3326dc2839cc7",
+    "paper.sbatch": "21f07c7c6abe4a7e6758c5b2d33559d63b5370ea9d4e012ee1575cba6c514d3a",
+    "paper100.sbatch": "5e24b938478e4a98f9d774e645e28989a0ce746efa3faec6eb95954860daea28",
+    "submit_controls.py": "db1683a45d5164cb29393afd47fbd6720282dcf0c148d581194774a52c198e7d",
+    "submit_paper50.py": "9caf92eb5149c028a3afefbc1bc7878c2128bd23f2cc72a59aa761a2b139882d",
+    "submit_paper100.py": "0e2a415fcde59994bae15888348fa270f90cab829c79729f94c319555076dbc6",
+    "p100-dispatch.sbatch": "dc16194732a986ae2cb05720568bbd1176ebbc8288903fc166785b7015469aee",
+    "preflight.py": "a9751e87fd19f436f46da28a51034f5ca9d455c0d6e440aa2918ec597e186ff0",
+    "monitor.py": "0eefaa730d4621c13da850346c8b3192d37b62340bbe89711ce87e3554b1b5db"
+  },
+  "control_jobs": "13446974\u201313447013,40pools1596datasets,4priorvalidatedcases",
+  "p50_jobs": "13447034\u201313447048,15pools118datasets,2priorvalidatedcases",
+  "p100_dispatch_job": "13447151,afterany13446591 then cost/failure/source/identity gate before remaining118cases",
+  "scope": "1600control+240paper, same fixed paired scopes, no baseline refits",
+  "note": "Submission records and actual returned IDs in remote outputs/spectral-v5/dispatch journals are authoritative; ranges only summarize known returned IDs."
+}

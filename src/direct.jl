@@ -60,10 +60,10 @@ function _equivalent_kernel(t, h, domain, boundary)
     boundary === :error && (lo > -1 || hi < 1) && throw(ArgumentError(
         "bandwidth crosses the domain boundary; use interior targets or boundary=:local_linear"))
     k = KernelSmoothing.EpanechnikovKernel()
-    M0(u) = .75*(u-u^3/3)
-    M1(u) = .75*(u^2/2-u^4/4)
-    M2(u) = .75*(u^3/3-u^5/5)
-    s0, s1, s2 = M0(hi)-M0(lo), M1(hi)-M1(lo), M2(hi)-M2(lo)
+    moment0(u) = .75*(u-u^3/3)
+    moment1(u) = .75*(u^2/2-u^4/4)
+    moment2(u) = .75*(u^3/3-u^5/5)
+    s0, s1, s2 = moment0(hi)-moment0(lo), moment1(hi)-moment1(lo), moment2(hi)-moment2(lo)
     det = s0*s2-s1^2
     det > 0 || throw(ArgumentError("degenerate smoothing window"))
     # The factor hi-lo changes a conditional-uniform window average into

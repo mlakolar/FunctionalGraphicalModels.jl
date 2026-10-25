@@ -9,7 +9,10 @@ covariance-diagonal calibration width. `spectral_covariance` reuses matching
 occupancy matrices and computes only missing widths. `fit_spectral_direct`
 returns a `DirectPrecisionFit` with method `:spectral_l2_aclime`.
 `spectral_l2_aclime_path` reuses each column model across an explicit score menu.
-Existing methods and their numerical source files are unchanged.
+Existing precision methods retain their objectives and calibration. A later
+CI compatibility repair only renames three internal covariance-moment functions
+(`M0/M1/M2` to `moment0/moment1/moment2`). All frozen experiment sources retain
+the original identifiers and exact file hashes; no running source is modified.
 
 ```julia
 cal = spectral_calibration(N, p, m; L=1.0, C_K=1.0,

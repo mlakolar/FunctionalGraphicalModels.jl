@@ -1,8 +1,10 @@
 # One persistent Julia process per GNU Parallel/srun worker; source and inputs
 # are private to the job. Completed scientific outputs are never fitted again.
-include("spectral_comparison.jl")
-include("audit_spectral_saved.jl")
-tasks=ARGS[1];output=ARGS[2];ntasks=parse(Int,ARGS[3]);failed=false
+source=get(ENV,"DFGM_SPECTRAL_SOURCE",dirname(@__DIR__))
+include(joinpath(source,"experiments/spectral_comparison.jl"))
+include(joinpath(source,"experiments/audit_spectral_saved.jl"))
+function run_spectral_batch(tasks,output,ntasks)
+failed=false
 for (sequence,line) in enumerate(eachline(tasks))
     isempty(line) && continue
     kind,index,rep=split(line,'\t');s=parse(Int,index);r=parse(Int,rep)
@@ -27,4 +29,8 @@ for (sequence,line) in enumerate(eachline(tasks))
         end
     end
 end
-exit(failed ? 1 : 0)
+failed ? 1 : 0
+end
+if abspath(PROGRAM_FILE)==@__FILE__
+    exit(run_spectral_batch(ARGS[1],ARGS[2],parse(Int,ARGS[3])))
+end
