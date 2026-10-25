@@ -93,8 +93,9 @@ remains exported and is the FDA function.
 Dense FPCA eigenvalues now use `n−1`, so they are `n/(n−1)` times the old
 values. Scores retain their scaling, up to FDA's deterministic sign rule.
 Graph covariance normalization remains `1/n`. Estimated PACE noise now uses
-FDA's middle-half integral of the excess over the raw smoothed covariance
-diagonal, before PSD projection. Singular zero-noise observation covariances throw
+FDA's default estimator: the rotated diagonal of Yao, Müller and Wang (2005),
+which the DFGM paper cites, integrated over the full interval and not PSD
+projected. FDA chose it by benchmark (FunctionalDataAnalysis.jl issue #17). Singular zero-noise observation covariances throw
 with the curve index. The retained P-spline smoother penalizes second
 differences of coefficients; FDA's derivative penalty is a different smoother.
 

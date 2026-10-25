@@ -1,5 +1,7 @@
 # Milestone 4 FGM migration report
 
+> **Later change (2026-10-25):** FunctionalDataAnalysis.jl now estimates the noise variance with the rotated diagonal over the full interval by default (its issue #17 benchmark). The estimated-noise values below describe this migration as merged; the current value on the test fixture is 0.030864993605722504.
+
 Status: **audit findings F1–F4 addressed; ready for controller validation**.
 Base: `origin/bsplinekit`, **6f0eac3d5cbe0fad93e88dcad28f389d89b61495**.
 The first follow-up continued from round 1, **f1860c951336be5550b90cf56f7c468bcf0ac682**,
