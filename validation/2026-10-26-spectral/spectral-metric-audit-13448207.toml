@@ -1,0 +1,6 @@
+metric_rows = 996
+scope = "Bounded independent metric/graph/score/selection replay on five saved cases, both targets/alltimes/all6candidates; no refits or full-study risk certificate"
+status = "passed"
+max_norm_error = 8.171241461241152e-14
+datasets = 5
+max_score_error = 7.275957614183426e-12

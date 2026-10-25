@@ -95,6 +95,7 @@ function spectral_dataset(kind,index,rep,out;point_index=0,ntasks=1,resume_folde
     serialize(joinpath(out,"covariances.bin"),(;direct=C,validation=Cv))
     serialize(joinpath(out,"targets.bin"),(;actual,nominal,grid))
     settings=Dict("kind"=>kind,"setting_index"=>index,"replicate"=>rep,"seed"=>seed,"n"=>n,"p"=>p,
+        "minimum_visits"=>m,"sampling_schedule"=>kind=="paper" ? string(dfgm2020_settings()[index].schedule) : "fixed_m",
         "evaluation_grid"=>grid,"bandwidths"=>cal.bandwidths,"diagonal_bandwidth"=>cal.h_d,
         "grid_mode"=>"exact_theory_grid","L"=>L,"C_K"=>1.,"operator_bias_coefficient"=>L,"kappa_bound"=>kappa_bound,
         "Aconf"=>1.,"ell"=>cal.ell,"score_menu"=>SCORE_MENU,"fixed_Kscore"=>2.,"noise_variance"=>noise_variance,
@@ -105,6 +106,7 @@ function spectral_dataset(kind,index,rep,out;point_index=0,ntasks=1,resume_folde
         "slurm_job_id"=>ENV["SLURM_JOB_ID"],"julia_version"=>string(VERSION),"source_sha256"=>source_hashes(),
         "runtime_project"=>RUNTIME,"runtime_manifest_sha256"=>bytes2hex(sha256(read(joinpath(RUNTIME,"Manifest.toml")))),
         "path_reuse"=>true,"warmup"=>"none; first-call compilation included in stage timings",
+        "timing_schema"=>"private_point_wall_clocks_v2",
         "precision_pilot"=>false,"psd_repair"=>false,"threshold"=>THRESHOLD,
         "candidate_count"=>6,"fixed_candidate_index"=>6,"identity"=>identity,
         "reused_covariance_widths"=>built.reused_widths,"additional_covariance_widths"=>built.computed_widths,
@@ -143,9 +145,9 @@ function spectral_dataset(kind,index,rep,out;point_index=0,ntasks=1,resume_folde
             return
         end
         diagonal_tick=time();d=max.(diag(C.matrices[:,:,t,cal.diagonal_index]),n^-2);diagonal_seconds=time()-diagonal_tick
-        fit_tick=time();rs=FGM.spectral_l2_aclime_path(C.matrices[:,:,t,:],SCORE_MENU;d,
+        point_path_start=time();rs=FGM.spectral_l2_aclime_path(C.matrices[:,:,t,:],SCORE_MENU;d,
             u=cal.u,v=cal.v,bias=cal.bias,kappa_bound,noise_variance)
-        path_seconds=time()-fit_tick;stages=NamedTuple[]
+        path_seconds=time()-point_path_start;stages=NamedTuple[]
         for (k,r) in enumerate(rs)
             columns[k][:,:,t].=r.columns;symmetry_seconds=0.;cap_seconds=0.;cap=NaN;status=r.status;err=""
             if all(isfinite,r.columns)
@@ -165,7 +167,7 @@ function spectral_dataset(kind,index,rep,out;point_index=0,ntasks=1,resume_folde
         serialize(temporary,checkpoint);mv(temporary,joinpath(out,"checkpoint-time-$t.bin"))
         println("spectral time=$t/$q seconds=$path_seconds statuses=$(getfield.(stages,:status))");flush(stdout)
     end
-    fit_tick=time()
+    precision_wall_start=time()
     if ntasks==1
         for t in 1:q;at_time(t);end
     else
@@ -173,7 +175,7 @@ function spectral_dataset(kind,index,rep,out;point_index=0,ntasks=1,resume_folde
             Threads.@spawn for t in task:ntasks:q;at_time(t);end
         end
     end
-    fit_wall_seconds=time()-fit_tick
+    fit_wall_seconds=time()-precision_wall_start
     serialize(joinpath(out,"paths.bin"),(;paths,columns,score_menu=SCORE_MENU))
     serialize(joinpath(out,"audit-witnesses.bin"),results[1].witness)
     serialize(joinpath(out,"diagnostics.bin"),results)

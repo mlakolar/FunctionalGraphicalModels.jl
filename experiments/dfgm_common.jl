@@ -3,6 +3,7 @@
 # curve CV criterion. This helper is an experiment optimization, not a new FDA
 # covariance estimator. Golden tests compare it with FDA on the raw products.
 import KernelSmoothing
+isdefined(@__MODULE__, :_dfgm_local_polynomial) || include(joinpath(@__DIR__,"dfgm_kernel_api.jl"))
 
 function _dfgm_common_covariance(fd,meanfit,grid;bandwidth,cache=Dict())
     n = FDA.nobs(fd)
@@ -25,7 +26,7 @@ function _dfgm_common_covariance(fd,meanfit,grid;bandwidth,cache=Dict())
         for candidate in bandwidth.bandwidths
             key = (Tuple(times),candidate)
             H = get!(cache,key) do
-                KernelSmoothing.smoothermatrix(coordinates,collect(zip(coordinates...));
+                _dfgm_smoother_matrix(coordinates,collect(zip(coordinates...));
                     bandwidth=candidate,kernel,degree=1)
             end
             predictions = (n.*(H*average) .- H*products)./(n-1)
@@ -37,11 +38,11 @@ function _dfgm_common_covariance(fd,meanfit,grid;bandwidth,cache=Dict())
     else
         Float64(bandwidth)
     end
-    surface = KernelSmoothing.localpolynomial(coordinates,average,(grid,grid);
+    surface = _dfgm_local_polynomial(coordinates,average,(grid,grid);
         bandwidth=h,kernel,degree=1)
     surface = (surface+transpose(surface))/2
     squares = vec(sum(abs2,R;dims=1)./n)
-    diagonal = KernelSmoothing.localpolynomial(times,squares,grid;bandwidth=h,kernel,degree=1)
+    diagonal = _dfgm_local_polynomial(times,squares,grid;bandwidth=h,kernel,degree=1)
     lower,upper = first(grid)+(last(grid)-first(grid))/4,last(grid)-(last(grid)-first(grid))/4
     integration_grid = vcat(lower,grid[lower .< grid .< upper],upper)
     differences = FDA.GridFunctionalData(reshape(diagonal-diag(surface),1,:),grid)

@@ -4,6 +4,7 @@
 # the work from pair enumeration to kernel matrices and BLAS products. It is
 # the same local-linear objective and fixed-mean whole-curve CV as FDA.
 import KernelSmoothing
+isdefined(@__MODULE__, :_dfgm_local_polynomial) || include(joinpath(@__DIR__,"dfgm_kernel_api.jl"))
 
 function _dfgm_residual_pool(fd,meanfit)
     times,residual,subjects = Float64[],Float64[],Int[]
@@ -88,7 +89,7 @@ function _dfgm_factorized_covariance(fd,meanfit,grid;bandwidth)
     m=FDA.nobs_per_curve(fd)
     diagonal_weights=[1/m[i] for i in pool.subjects]
     kernel=KernelSmoothing.GaussianKernel()
-    diagonal=KernelSmoothing.localpolynomial(pool.times,pool.residual.^2,grid;
+    diagonal=_dfgm_local_polynomial(pool.times,pool.residual.^2,grid;
         bandwidth=h,kernel,degree=1,weights=diagonal_weights)
     lower,upper=first(grid)+(last(grid)-first(grid))/4,last(grid)-(last(grid)-first(grid))/4
     integration_grid=vcat(lower,grid[lower .< grid .< upper],upper)

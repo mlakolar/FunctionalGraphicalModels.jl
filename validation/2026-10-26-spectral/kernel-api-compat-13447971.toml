@@ -1,0 +1,2 @@
+scope = "Focused renamed-KernelSmoothing API compatibility on old frozen dependency lock; covariance golden cases only, no precision fits"
+status = "passed"

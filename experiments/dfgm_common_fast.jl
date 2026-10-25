@@ -2,6 +2,7 @@
 # retained as an independent reference. No pair involving the same visit is
 # included, and the covariance/mean/CV/noise conventions are unchanged.
 import KernelSmoothing
+isdefined(@__MODULE__, :_dfgm_local_polynomial) || include(joinpath(@__DIR__,"dfgm_kernel_api.jl"))
 
 
 function _dfgm_common_fast_mean(fd,grid;bandwidth,cache=Dict())
@@ -18,7 +19,7 @@ function _dfgm_common_fast_mean(fd,grid;bandwidth,cache=Dict())
         for candidate in bandwidth.bandwidths
             key=(:exact_common_mean_weights,Tuple(times),candidate)
             H=get!(cache,key) do
-                KernelSmoothing.smoothermatrix(times,times;bandwidth=candidate,kernel,degree=1)
+                _dfgm_smoother_matrix(times,times;bandwidth=candidate,kernel,degree=1)
             end
             predicted=(n.*(H*average).-H*Y)./(n-1)
             push!(errors,sum(abs2,Y-predicted)/length(Y))
@@ -123,7 +124,7 @@ function _dfgm_common_fast_covariance(fd,meanfit,grid;bandwidth,cache=Dict())
     surface=(surface+transpose(surface))/2
     squares=vec(sum(abs2,R;dims=1)./n)
     kernel=KernelSmoothing.GaussianKernel()
-    diagonal=KernelSmoothing.localpolynomial(times,squares,grid;bandwidth=h,kernel,degree=1)
+    diagonal=_dfgm_local_polynomial(times,squares,grid;bandwidth=h,kernel,degree=1)
     lower,upper=first(grid)+(last(grid)-first(grid))/4,last(grid)-(last(grid)-first(grid))/4
     integration_grid=vcat(lower,grid[lower .< grid .< upper],upper)
     differences=FDA.GridFunctionalData(reshape(diagonal-diag(surface),1,:),grid)
