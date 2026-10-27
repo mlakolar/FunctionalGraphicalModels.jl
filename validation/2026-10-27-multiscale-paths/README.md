@@ -34,3 +34,10 @@ must not be extrapolated to p=50/100. A production-size timing canary on
 Discovery should precede the next experiment. Native solver reuse changes the
 performance implementation, not the estimator objective. Infeasibility remains
 visible; the new low-level spectral API does not use a zero fallback.
+
+Full-package CI run 40471342413 failed before tests during resolution:
+CovarianceSelection master requires ProximalSolvers 0.1, while ProximalSolvers
+master is now 0.2. No dependency compatibility bounds were silently broadened.
+The separate `Multiscale solver paths` workflow tests these sources with only
+the three solver dependencies on LTS and current Julia. It is an additional
+focused check, not a replacement for full-package integration validation.

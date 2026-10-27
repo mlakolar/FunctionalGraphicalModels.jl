@@ -1,0 +1,32 @@
+name: Multiscale solver paths
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/multiscale_path.jl'
+      - 'validation/2026-10-27-multiscale-paths/**'
+      - '.github/workflows/multiscale-paths.yml'
+  workflow_dispatch:
+jobs:
+  focused-solvers:
+    name: Focused solvers Julia ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['lts', '1']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+      - name: Resolve only the conic solver dependencies
+        run: julia --project=validation/2026-10-27-multiscale-paths -e 'using Pkg; Pkg.instantiate()'
+        env:
+          JULIA_NUM_PRECOMPILE_TASKS: '1'
+      - name: Test native and cold source formulations
+        run: julia --project=validation/2026-10-27-multiscale-paths validation/2026-10-27-multiscale-paths/targeted.jl
+        env:
+          FGM_SOURCE: ${{ github.workspace }}
+          OPENBLAS_NUM_THREADS: '1'
