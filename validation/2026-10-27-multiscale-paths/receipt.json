@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "ec5baf74542c9d7d21a3d5ed35ae0b435650c50e",
+  "test_checks_passed": 139,
+  "validation_scope": "targeted source harness; complete package CI separate",
+  "files": {
+    "src/multiscale_path.jl": "36254368c0f76ffdbf30fbd705e7a12a18268d8dbdec23d63dd5ae0bf66ee9b1",
+    "src/direct.jl": "c6dd1c8bdf41777f4e22becac4945a2ebde0053aa3afe38a22293187b50ba500",
+    "src/direct_path.jl": "f60eede6edfe3635f6870565617caaa9dada3b2b54d4deb3da110929c8731738",
+    "src/spectral_direct.jl": "f0507fed16b485dbb4b17b4b9c3e560c8c0616926df1315550f6eb439b0be1df",
+    "test/multiscale_path.jl": "03fa5ed6c4cc5ce41c8b3f00383ee67988c1fd395bf18ba4b5437bac20ca9f2a",
+    "experiments/benchmark_multiscale_path.jl": "8e103b04fe47536a6be5d98abb3cb1603ca3b1311484930e40c64ebf7ee36564"
+  }
+}

@@ -1,6 +1,7 @@
 module FunctionalGraphicalModels
 
 using LinearAlgebra
+import SparseArrays
 import CovarianceSelection
 import Random
 import BSplineKit
@@ -22,7 +23,8 @@ export quadrature_weights, score_covariance, smooth_bspline,
 export DirectCovariance, DirectPrecisionFit, direct_covariance, fit_direct,
        bias_aclime, interval_symmetrize, simulate_dfgm2020, dfgm2020_settings,
        bias_aclime_path, fit_direct_path, spectral_calibration,
-       spectral_l2_aclime, spectral_l2_aclime_path, fit_spectral_direct, spectral_covariance
+       spectral_l2_aclime, spectral_l2_aclime_path, fit_spectral_direct, spectral_covariance,
+       multiscale_l2_aclime_path, fit_multiscale_l2_path
 
 include("data.jl")
 include("tuning.jl")
@@ -34,6 +36,7 @@ include("simulation.jl")
 include("direct.jl")
 include("direct_path.jl")
 include("spectral_direct.jl")
+include("multiscale_path.jl")
 include("dfgm_simulation.jl")
 
 end
