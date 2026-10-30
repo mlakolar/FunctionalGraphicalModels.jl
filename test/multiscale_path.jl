@@ -87,8 +87,8 @@ end
 
 @testset "Analytic zero and lazy covariance updates" begin
     F=FunctionalGraphicalModels
-    # With theta=2*kappa/d=4 and u=.5, zero is feasible exactly at penalty .5.
-    a=(matrices=reshape([1. .1;.1 1.],2,2,1),d=ones(2),u=[.5],v=[0.],bias=[.01],kappa_bound=2.)
+    # With theta=2*kappa/d=4 and u=1, zero is feasible exactly at penalty .5.
+    a=(matrices=reshape([1. .1;.1 1.],2,2,1),d=ones(2),u=[1.],v=[0.],bias=[.01],kappa_bound=2.)
     b=(;a...,matrices=reshape([2. .3;.3 1.5],2,2,1))
     ks=[.5,.1,1.,.2] # skip before, between and after actual solves
     path=F.multiscale_l2_aclime_path([a,b],ks;calibration=:spectral)
@@ -117,4 +117,29 @@ end
     @test p.results[1][1].column_records[1].termination=="ANALYTIC_ZERO"
     @test iszero(p.results[1][1].columns)
     @test p.results[1][2].column_records[1].termination=="SOLVED"
+end
+
+@testset "Auxiliary witness repair retains every primal guard" begin
+    F=FunctionalGraphicalModels
+    A=ones(1,1,1);base=fill(.01,1,1);bias=[.01]
+    beta=[1.];budget=1.;g=fill(1.0001,1,1)
+    raw=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,g)
+    @test raw.relative>1e-5
+    repaired=F._l2_project_witness(g,budget,nothing)
+    @test repaired==ones(1,1)
+    @test g[1]==1.0001 # preserve the solver's candidate
+    checked=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,repaired)
+    @test checked.relative<=1e-5
+    @test beta==[1.] && budget==1.
+    # Repairing a cone cannot excuse an incompatible score or column bound.
+    bad=F._l2_primal_residual(A,zeros(1,1),[1.],1,1.,nothing,beta,budget,repaired)
+    @test bad.relative>1e-5
+    bad_column=F._l2_primal_residual(A,base,bias,1,1.,nothing,[2.],budget,repaired)
+    @test bad_column.relative>1e-5
+    # Spectral witness must respect the smaller of t and B, with both guards kept.
+    projected=F._l2_project_witness(reshape([.7,0.],2,1),.6,.5)
+    @test norm(projected)<=.5
+    spectral=F._l2_primal_residual(reshape([2.5 0.;0. 1.],2,2,1),fill(.005,2,1),
+        [.01],1,1.,.5,[.4,0.],.6,projected)
+    @test spectral.relative<=1e-5
 end

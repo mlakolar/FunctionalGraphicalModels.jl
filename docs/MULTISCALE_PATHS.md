@@ -73,8 +73,23 @@ The low-level API returns unsymmetrized columns. For a final precision estimate,
 apply `interval_symmetrize` and the existing induced-norm cap when required by
 the estimator definition. Unlike the older spectral API's explicitly labeled
 infeasibility fallback, the new API leaves certified-infeasible columns as NaN
-failures. It does not substitute zero. Analytic-zero feasible optima are solved
-and reported normally. These failure policies must be distinguished in reports.
+failures. It does not substitute zero. For either calibration, if every width satisfies
+`penalty*base[j,h]>=1`, beta=g=t=0 is feasible and globally optimal. This exact
+certificate skips the conic solve and reports `termination="ANALYTIC_ZERO"`,
+zero iterations and zero setup/solve times. No numerical tolerance is added to
+the certificate. The diagnostic `analytic_zeros` counts these column solves.
+Skipped points preserve lazy matrix updates even in a nonmonotone penalty path. These failure policies must be distinguished in reports.
+
+Before rejecting a SOLVED column on primal residuals, the path can project its
+auxiliary bias witness onto the intersection of its concentric L2 balls
+(radius t, and B_j for spectral calibration). This changes neither beta nor t,
+nor the optimization objective. Every original score-coordinate, raw bias-ball,
+normalized auxiliary-ball and column constraint is then checked again at the
+same 1e-5 guard. A projection that breaks a score or leaves any other violation
+is rejected. Clarabel's gap and feasibility tolerances remain 1e-7.
+`witness_projected` and `raw_max_relative_violation` preserve the diagnostic;
+`witness_repairs` counts accepted projected certificates. This is auxiliary
+certificate repair, not a projection or clipping of the precision columns.
 
 Use `reuse=false` for independent native solves. The returned workspace-build,
 matrix-update and RHS-update counts establish which reuse occurred. They do
