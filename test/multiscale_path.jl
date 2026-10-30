@@ -143,7 +143,7 @@ end
     ell=(3log(50)+log(8))/200;q=1 ./ (8 .*widths)
     u=sqrt(ell).*(1 .+q).+ell.*(1 .+q.^2)
     v=sqrt(ell).*q.+ell.*(1 .+q.^2)
-    problem=(;matrices=A,u,v,bias=.1.*widths.^2,pilot_index=5)
+    problem=(;matrices=A,u,v,bias=0.1 .* widths.^2,pilot_index=5)
     native=F.multiscale_l2_aclime_path([problem],[.05];noise_variance=.5,
         diagonal_floor=200^-2,lp_solver=:clarabel)
     r=native.results[1][1]
