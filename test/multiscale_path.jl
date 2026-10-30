@@ -149,20 +149,47 @@ end
     r=native.results[1][1]
     @test r.status===:optimal
     @test all(x->x.max_relative_violation<=1e-5,r.column_records)
-    @test native.diagnostics.guard_retries==sum(x.retry_count for x in r.column_records)
+    @test native.diagnostics.recovery_attempts==sum(x.retry_count for x in r.column_records)
     for record in r.column_records
         attempts=record.attempt_records
         @test length(attempts)==record.retry_count+1
         @test first(attempts).tolerance==1e-8
-        @test last(attempts).termination=="SOLVED"
+        @test last(attempts).termination in ("SOLVED","OPTIMAL")
         @test last(attempts).max_relative_violation<=1e-5
         if record.retry_count>0
-            @test first(attempts).termination=="SOLVED"
-            @test first(attempts).max_relative_violation>1e-5
-            @test all(i->attempts[i].tolerance<attempts[i-1].tolerance,2:length(attempts))
+            @test !isempty(first(attempts).error)
+            @test first(attempts).termination!="SOLVED" || first(attempts).max_relative_violation>1e-5
+            @test all(i->attempts[i].tolerance<=attempts[i-1].tolerance,2:length(attempts))
         end
     end
     cold=F.bias_aclime(A;u,v,bias=problem.bias,pilot_index=5,K2=.05,
         noise_variance=.5,bias_norm=:l2,diagonal_floor=200^-2,lp_solver=:clarabel)
     @test maximum(abs.(r.budgets-cold.budgets)./(1 .+abs.(cold.budgets)))<=1e-4
+end
+
+@testset "Unscaled recovery on a full-width reused path" begin
+    F=FunctionalGraphicalModels
+    A=reshape(reinterpret(Float64,read(joinpath(@__DIR__,"fixtures","multiscale-id1-full8.f64"))),50,50,8)
+    widths=[.025,.05,.075,.1,.15,.2,.3,.4]
+    ell=(3log(50)+log(8))/200;q=1 ./ (8 .*widths)
+    u=sqrt(ell).*(1 .+q).+ell.*(1 .+q.^2)
+    v=sqrt(ell).*q.+ell.*(1 .+q.^2)
+    problem=(;matrices=A,u,v,bias=widths.^2,pilot_index=5)
+    path=F.multiscale_l2_aclime_path([problem],[.1,.2];noise_variance=.5,
+        diagonal_floor=200^-2,lp_solver=:clarabel)
+    @test all(r->r.status===:optimal,path.results[1])
+    for r in path.results[1],c in r.column_records
+        @test c.max_relative_violation<=1e-5
+        @test c.termination in ("SOLVED","OPTIMAL","ANALYTIC_ZERO")
+        @test all(a->a.tolerance<=1e-8,c.attempt_records)
+        @test c.retry_count==max(0,length(c.attempt_records)-1)
+        if c.backend===:jump_unscaled
+            @test c.termination=="OPTIMAL"
+            @test any(a->!isempty(a.error),c.attempt_records[1:end-1])
+        end
+    end
+    cold=F.bias_aclime(A;u,v,bias=problem.bias,pilot_index=5,K2=.2,
+        noise_variance=.5,bias_norm=:l2,diagonal_floor=200^-2,lp_solver=:clarabel)
+    @test maximum(abs.(path.results[1][2].budgets-cold.budgets)./(1 .+abs.(cold.budgets)))<=1e-4
+    @test path.diagnostics.recovery_attempts==sum(c.retry_count for r in path.results[1] for c in r.column_records)
 end

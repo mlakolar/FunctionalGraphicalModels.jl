@@ -111,6 +111,61 @@ function _l2_primal_residual(A,base,bias,j,penalty,bound,beta,budget,g)
     (;violation,relative)
 end
 
+# Equivalent cold formulation in the original bias units. Keeping b explicit
+# avoids the large normalized auxiliary variables that can stall the native path.
+function _l2_unscaled_candidate(A,base,bias,j,penalty,bound;tolerance=1e-8)
+    p,_,H=size(A);started=time_ns()
+    model=_precision_model(;cone=true,lp_solver=:clarabel)
+    for name in ("tol_gap_abs","tol_gap_rel","tol_feas")
+        JuMP.set_optimizer_attribute(model,name,tolerance)
+    end
+    JuMP.@variable(model,beta[1:p]);JuMP.@variable(model,z[1:p]>=0)
+    JuMP.@expression(model,t,sum(z))
+    JuMP.@constraint(model,[k=1:p],beta[k]<=z[k])
+    JuMP.@constraint(model,[k=1:p],-beta[k]<=z[k])
+    JuMP.@variable(model,b[1:p,1:H])
+    if bound!==nothing
+        JuMP.@constraint(model,[bound;beta] in JuMP.SecondOrderCone())
+        JuMP.@constraint(model,t<=sqrt(p)*bound)
+    end
+    for h in 1:H
+        JuMP.@constraint(model,[bias[h]*t;b[:,h]] in JuMP.SecondOrderCone())
+        if bound!==nothing
+            JuMP.@constraint(model,[bias[h]*bound;b[:,h]] in JuMP.SecondOrderCone())
+        end
+        for k in 1:p
+            r=sum(A[k,l,h]*beta[l] for l in 1:p)-(k==j)-b[k,h]
+            JuMP.@constraint(model,r<=penalty*base[k,h])
+            JuMP.@constraint(model,-r<=penalty*base[k,h])
+        end
+    end
+    JuMP.@objective(model,Min,t)
+    setup_seconds=(time_ns()-started)/1e9;tick=time_ns()
+    JuMP.optimize!(model)
+    solve_seconds=(time_ns()-tick)/1e9
+    raw_status=string(JuMP.termination_status(model))
+    termination=raw_status=="INFEASIBLE" ? "PRIMAL_INFEASIBLE" : raw_status
+    iterations_available=true
+    iterations=try
+        Int(JuMP.barrier_iterations(model))
+    catch
+        iterations_available=false;0
+    end
+    values=JuMP.has_values(model)
+    coefficient=values ? JuMP.value.(beta) : fill(NaN,p)
+    budget=values ? JuMP.value(t) : NaN
+    witness=values ? JuMP.value.(b) : fill(NaN,p,H)
+    g=zeros(p,H)
+    for h in 1:H
+        # At zero bias the exact witness is zero. The unchanged score guard
+        # must still pass after discarding any numerical residue in b.
+        bias[h]>0 && (g[:,h].=witness[:,h]./bias[h])
+    end
+    JuMP.empty!(model)
+    (;beta=coefficient,budget,g,termination,raw_status,iterations,iterations_available,
+        setup_seconds,solve_seconds)
+end
+
 function _l2_pilot(A,d,u,v,bias,pilot_index,K1,noise_variance,lp_solver)
     p=size(A,1);theta=zeros(p)
     for j in 1:p
@@ -150,8 +205,9 @@ remain NaN and have explicit column records; certified infeasibility is
 reported as failure rather than substituted by zero. If the score allowances
 contain the unit vector at every width, the exact optimum is returned as zero
 without building or solving a conic program (`termination="ANALYTIC_ZERO"`).
-Use `interval_symmetrize`
-on successful columns when constructing the final precision estimator.
+Numerical rejections use cold native and equivalent unscaled JuMP/Clarabel
+recovery at the same or stricter tolerances, with all attempts retained.
+Use `interval_symmetrize` on successful columns when constructing the final precision estimator.
 """
 function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot,
         K1::Real=2,noise_variance::Real=1,diagonal_floor::Real=1e-8,
@@ -179,7 +235,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
         end
     end
     workspaces=Any[];previous_shape=nothing;results=Vector{Any}()
-    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;guard_retries=0
+    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;recovery_attempts=0;cold_restarts=0;unscaled_solves=0
     for spec in specs
         A=Float64.(spec.matrices);p,_,H=size(A);pilot_index=get(spec,:pilot_index,1)
         d=calibration===:pilot ? max.(diag(A[:,:,pilot_index]),diagonal_floor) : Float64.(spec.d)
@@ -190,7 +246,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             message="pilot: "*sprint(showerror,exception)
             push!(results,[(;penalty=k,columns=fill(NaN,p,p),budgets=fill(NaN,p),pilot=fill(NaN,p),
                 column_records=[(;column=j,status=:failure,termination="PILOT_FAILURE",iterations=0,
-                    setup_seconds=0.,solve_seconds=0.,max_violation=NaN,max_relative_violation=NaN,retry_count=0,attempt_records=NamedTuple[],error=message) for j in 1:p],
+                    setup_seconds=0.,solve_seconds=0.,max_violation=NaN,max_relative_violation=NaN,retry_count=0,backend=:pilot,iterations_available=false,attempt_records=NamedTuple[],error=message) for j in 1:p],
                 status=:failure) for k in ks])
             workspaces=Any[];previous_shape=nothing
             continue
@@ -212,58 +268,76 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                 if all(penalty*base[j,h]>=1. for h in 1:H)
                     columns[index][:,j].=0.;budgets[index][j]=0.;analytic_zeros+=1
                     push!(records[index],(;column=j,status=:optimal,termination="ANALYTIC_ZERO",iterations=0,
-                        setup_seconds=0.,solve_seconds=0.,max_violation=0.,max_relative_violation=0.,retry_count=0,attempt_records=NamedTuple[],error=""))
+                        setup_seconds=0.,solve_seconds=0.,max_violation=0.,max_relative_violation=0.,retry_count=0,backend=:analytic,iterations_available=true,attempt_records=NamedTuple[],error=""))
                     continue
                 end
                 setup_seconds=0.;solve_seconds=0.;attempt_records=NamedTuple[]
-                # A SOLVED termination is insufficient: the unscaled guard decides.
-                # Rebuild at stricter tolerances only after a solved candidate fails it.
-                # Never retry/convert certified infeasibility, and never enlarge the guard.
-                for (attempt,tolerance) in enumerate((1e-8,1e-9,1e-10))
-                    started=time_ns();status="NOT_RUN";iterations=0;violation=relative=NaN
-                    guard_failed=false;setup_this=solve_this=0.
+                initially_reused=reuse && workspaces[j]!==nothing
+                steps=initially_reused ?
+                    [(:native,1e-8),(:native,1e-8),(:jump_unscaled,1e-8),(:jump_unscaled,1e-9),(:jump_unscaled,1e-10)] :
+                    [(:native,1e-8),(:jump_unscaled,1e-8),(:jump_unscaled,1e-9),(:jump_unscaled,1e-10)]
+                for (attempt,(backend,tolerance)) in enumerate(steps)
+                    attempt>1 && (recovery_attempts+=1)
+                    started=time_ns();status="NOT_RUN";raw_status=status;iterations=0;iterations_available=true
+                    violation=relative=NaN;guard_failed=false;setup_this=solve_this=0.
+                    candidate=nothing;mode=:fresh
                     try
-                        if attempt>1 || !reuse || workspaces[j]===nothing
-                            data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
-                            workspaces[j]=_l2_workspace(data;tolerance);builds+=1
-                        elseif !data_current
-                            data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
-                            _l2_update!(workspaces[j],data);matrix_updates+=1
+                        if backend===:native
+                            if attempt>1 || !initially_reused
+                                data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
+                                workspaces[j]=_l2_workspace(data;tolerance);builds+=1
+                                attempt>1 && (cold_restarts+=1)
+                            elseif !data_current
+                                data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
+                                _l2_update!(workspaces[j],data);matrix_updates+=1;mode=:matrix_update
+                            else
+                                _l2_penalty!(workspaces[j],base,j,penalty);rhs_updates+=1;mode=:rhs_update
+                            end
+                            data_current=true
+                            setup_this=(time_ns()-started)/1e9;setup_seconds+=setup_this;tick=time_ns()
+                            solution=Clarabel.solve!(workspaces[j].solver)
+                            solve_this=(time_ns()-tick)/1e9;solve_seconds+=solve_this
+                            status=raw_status=string(solution.status);iterations=Int(solution.iterations)
+                            beta=copy(solution.x[1:p]);budget=solution.x[2p+1]
+                            g=copy(reshape(solution.x[2p+2:end],p,H))
                         else
-                            _l2_penalty!(workspaces[j],base,j,penalty);rhs_updates+=1
+                            unscaled_solves+=1
+                            cold=_l2_unscaled_candidate(A,base,spec.bias,j,penalty,bound;tolerance)
+                            setup_this=cold.setup_seconds;solve_this=cold.solve_seconds
+                            setup_seconds+=setup_this;solve_seconds+=solve_this
+                            status=cold.termination;raw_status=cold.raw_status
+                            iterations=cold.iterations;iterations_available=cold.iterations_available
+                            beta=cold.beta;budget=cold.budget;g=cold.g
                         end
-                        data_current=true
-                        setup_this=(time_ns()-started)/1e9;setup_seconds+=setup_this;tick=time_ns()
-                        solution=Clarabel.solve!(workspaces[j].solver)
-                        solve_this=(time_ns()-tick)/1e9;solve_seconds+=solve_this
-                        status=string(solution.status);iterations=solution.iterations
-                        status=="SOLVED" || error("Clarabel status $status")
-                        beta=copy(solution.x[1:p]);budget=solution.x[2p+1]
-                        g=reshape(solution.x[2p+2:end],p,H)
+                        candidate=(;beta,budget,g)
+                        status in ("SOLVED","OPTIMAL") || error("$backend status $status")
                         check=_l2_primal_residual(A,base,spec.bias,j,penalty,bound,beta,budget,g)
                         violation=check.violation;relative=check.relative
                         guard_failed=!(all(isfinite,beta)&&isfinite(budget)&&isfinite(relative)&&relative<=1e-5)
                         guard_failed && error("primal residual check failed: $relative")
-                        push!(attempt_records,(;termination=status,iterations,tolerance,setup_seconds=setup_this,
-                            solve_seconds=solve_this,max_violation=violation,max_relative_violation=relative,error=""))
+                        push!(attempt_records,(;backend,mode,termination=status,raw_status,iterations,iterations_available,tolerance,
+                            setup_seconds=setup_this,solve_seconds=solve_this,max_violation=violation,
+                            max_relative_violation=relative,rejected_candidate=nothing,error=""))
                         columns[index][:,j].=beta;budgets[index][j]=budget
-                        push!(records[index],(;column=j,status=:optimal,termination=status,
-                            iterations=sum(r.iterations for r in attempt_records),setup_seconds,solve_seconds,
+                        push!(records[index],(;column=j,status=:optimal,termination=status,backend,
+                            iterations=sum(r.iterations for r in attempt_records),
+                            iterations_available=all(r.iterations_available for r in attempt_records),setup_seconds,solve_seconds,
                             max_violation=violation,max_relative_violation=relative,retry_count=attempt-1,attempt_records,error=""))
-                        # A stricter retry must not silently change the next candidate's defaults.
-                        attempt>1 && (workspaces[j]=nothing)
                         break
                     catch exception
                         message=sprint(showerror,exception)
-                        push!(attempt_records,(;termination=status,iterations,tolerance,setup_seconds=setup_this,
-                            solve_seconds=solve_this,max_violation=violation,max_relative_violation=relative,error=message))
+                        push!(attempt_records,(;backend,mode,termination=status,raw_status,iterations,iterations_available,tolerance,
+                            setup_seconds=setup_this,solve_seconds=solve_this,max_violation=violation,
+                            max_relative_violation=relative,rejected_candidate=status=="PRIMAL_INFEASIBLE" ? nothing : candidate,error=message))
                         workspaces[j]=nothing
-                        if (guard_failed || (attempt>1 && status=="ALMOST_SOLVED")) && attempt<3
-                            guard_retries+=1
+                        recoverable=guard_failed || status in ("ALMOST_SOLVED","NUMERICAL_ERROR","INSUFFICIENT_PROGRESS",
+                            "MAX_ITERATIONS","ALMOST_OPTIMAL","SLOW_PROGRESS","ITERATION_LIMIT","OTHER_ERROR")
+                        if recoverable && attempt<length(steps)
                             continue
                         end
-                        push!(records[index],(;column=j,status=:failure,termination=status,
-                            iterations=sum(r.iterations for r in attempt_records),setup_seconds,solve_seconds,
+                        push!(records[index],(;column=j,status=:failure,termination=status,backend,
+                            iterations=sum(r.iterations for r in attempt_records),
+                            iterations_available=all(r.iterations_available for r in attempt_records),setup_seconds,solve_seconds,
                             max_violation=violation,max_relative_violation=relative,retry_count=attempt-1,attempt_records,error=message))
                         break
                     end
@@ -274,7 +348,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             column_records=records[i],status=all(r->r.status===:optimal,records[i]) ? :optimal : :failure) for i in eachindex(ks)])
     end
     (;results,diagnostics=(;workspace_builds=builds,matrix_updates,rhs_updates,
-        reuse,iterate_warm_start=false,calibration,analytic_zeros,guard_retries))
+        reuse,iterate_warm_start=false,calibration,analytic_zeros,recovery_attempts,cold_restarts,unscaled_solves))
 end
 
 """
@@ -354,7 +428,8 @@ function fit_multiscale_l2_path(C::DirectCovariance,penalties;
         positive=BitVector([isposdef(Symmetric(P[a,b][:,:,t])) for t in 1:q])
         settings=(;method=:l2_aclime,configurations[a]...,K1,K2=ks[b],confidence,noise_variance,
             threshold,lp_solver,socp_solver=:clarabel,path_reuse=:native_clarabel,
-            iterate_warm_start=false,symmetrization=:interval_l1)
+            iterate_warm_start=false,numerical_recovery=:cold_native_then_unscaled_jump,
+            native_tolerance=1e-8,symmetrization=:interval_l1)
         fits[a,b]=DirectPrecisionFit(copy(C.grid),P[a,b],W[a,b],adjacency,positive,records[a,b],C,settings)
     end
     (;fits,errors,configurations,penalties=ks,solver_diagnostics)

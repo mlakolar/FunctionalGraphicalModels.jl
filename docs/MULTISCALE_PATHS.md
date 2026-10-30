@@ -80,18 +80,26 @@ zero iterations and zero setup/solve times. No numerical tolerance is added to
 the certificate. The diagnostic `analytic_zeros` counts these column solves.
 Skipped points preserve lazy matrix updates even in a nonmonotone penalty path. These failure policies must be distinguished in reports.
 
-The native path checks every original constraint in the unscaled variables at
-relative tolerance 1e-5. If a SOLVED candidate fails that guard, the same problem
-is rebuilt cold at stricter Clarabel gap/feasibility tolerances 1e-9, then 1e-10
-if needed. ALMOST_SOLVED is never accepted, even when the primal guard passes. The initial native tolerance is 1e-8, tightened from 1e-7 after saved-cache
-objective comparisons exposed inaccurate otherwise guard-passing columns.
-Acceptance is never relaxed; pilot LP and symmetrization defaults remain 1e-7. No bias
-witness, precision column, objective or regularization parameter is projected or
-changed. Certified infeasibility is never retried or converted into an estimate.
-Each column's `attempt_records` preserves all rejected attempts and their
-settings, timings, errors and residuals. `retry_count` counts its retries;
-`guard_retries` counts them across the path. Strict workspaces are discarded
-before the next candidate, which again starts at the standard tolerance.
+The initial native gap/feasibility tolerance is 1e-8, tightened from 1e-7 after
+saved-cache objective comparisons exposed inaccurate guard-passing columns.
+Pilot LP and symmetrization defaults remain 1e-7. Every original acceptance
+constraint is checked at unchanged relative tolerance 1e-5.
+
+A numerically rejected reused solve is rebuilt cold at the same 1e-8 tolerance.
+If native recovery fails, an independent JuMP/Clarabel model solves the identical
+column program using the original bias vectors b rather than normalized g.
+It holds the pilot and every bound/penalty fixed, uses 1e-8, and retries at stricter
+1e-9/1e-10 only if needed. This is an equivalent formulation, not covariance or
+precision projection. Native SOLVED or JuMP OPTIMAL plus every original guard
+is required; ALMOST_SOLVED is never accepted. Certified infeasibility is never
+retried or converted into an estimate. Zero bias uses the exact zero auxiliary
+witness, which must still pass the original score guard.
+
+`attempt_records` preserves rejected candidates, all statuses, backends, accuracy
+settings, residuals, errors and clocks. The column's `backend` identifies the
+accepted formulation. `retry_count` counts additional attempts; path diagnostics
+include `recovery_attempts`, `cold_restarts`, and `unscaled_solves`. Unknown barrier
+iteration counts are explicitly flagged by `iterations_available=false`.
 
 Use `reuse=false` for independent native solves. The returned workspace-build,
 matrix-update and RHS-update counts establish which reuse occurred. They do
