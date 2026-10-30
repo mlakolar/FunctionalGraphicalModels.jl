@@ -82,8 +82,10 @@ Skipped points preserve lazy matrix updates even in a nonmonotone penalty path. 
 
 The native path checks every original constraint in the unscaled variables at
 relative tolerance 1e-5. If a SOLVED candidate fails that guard, the same problem
-is rebuilt cold at stricter Clarabel gap/feasibility tolerances 1e-8, 1e-9, then 1e-10
-if needed. ALMOST_SOLVED is never accepted, even when the primal guard passes. The initial defaults stay 1e-7; acceptance is never relaxed. No bias
+is rebuilt cold at stricter Clarabel gap/feasibility tolerances 1e-9, then 1e-10
+if needed. ALMOST_SOLVED is never accepted, even when the primal guard passes. The initial native tolerance is 1e-8, tightened from 1e-7 after saved-cache
+objective comparisons exposed inaccurate otherwise guard-passing columns.
+Acceptance is never relaxed; pilot LP and symmetrization defaults remain 1e-7. No bias
 witness, precision column, objective or regularization parameter is projected or
 changed. Certified infeasibility is never retried or converted into an estimate.
 Each column's `attempt_records` preserves all rejected attempts and their

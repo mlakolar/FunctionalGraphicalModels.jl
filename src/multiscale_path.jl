@@ -53,7 +53,7 @@ function _l2_problem_data(A, base, bias, j, penalty, bound)
     (;matrix,rhs,cones,objective,score_rows)
 end
 
-function _l2_workspace(data; tolerance=1e-7)
+function _l2_workspace(data; tolerance=1e-8)
     n=length(data.objective)
     settings=Clarabel.Settings(verbose=false,tol_gap_abs=tolerance,tol_gap_rel=tolerance,
         tol_feas=tolerance,max_threads=1,presolve_enable=false,
@@ -219,7 +219,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                 # A SOLVED termination is insufficient: the unscaled guard decides.
                 # Rebuild at stricter tolerances only after a solved candidate fails it.
                 # Never retry/convert certified infeasibility, and never enlarge the guard.
-                for (attempt,tolerance) in enumerate((1e-7,1e-8,1e-9,1e-10))
+                for (attempt,tolerance) in enumerate((1e-8,1e-9,1e-10))
                     started=time_ns();status="NOT_RUN";iterations=0;violation=relative=NaN
                     guard_failed=false;setup_this=solve_this=0.
                     try
@@ -258,7 +258,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                         push!(attempt_records,(;termination=status,iterations,tolerance,setup_seconds=setup_this,
                             solve_seconds=solve_this,max_violation=violation,max_relative_violation=relative,error=message))
                         workspaces[j]=nothing
-                        if (guard_failed || (attempt>1 && status=="ALMOST_SOLVED")) && attempt<4
+                        if (guard_failed || (attempt>1 && status=="ALMOST_SOLVED")) && attempt<3
                             guard_retries+=1
                             continue
                         end

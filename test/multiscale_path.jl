@@ -134,9 +134,9 @@ end
     @test column.relative>1e-5
 end
 
-@testset "Saved covariance numerical regression with strict retries" begin
+@testset "Saved covariance numerical regression with strict retries" for id in (1,151)
     F=FunctionalGraphicalModels
-    bytes=read(joinpath(@__DIR__,"fixtures","multiscale-id1-full8.f64"))
+    bytes=read(joinpath(@__DIR__,"fixtures","multiscale-id$(id)-full8.f64"))
     @test length(bytes)==160000
     A=reshape(reinterpret(Float64,bytes),50,50,8)
     widths=[.025,.05,.075,.1,.15,.2,.3,.4]
@@ -153,7 +153,7 @@ end
     for record in r.column_records
         attempts=record.attempt_records
         @test length(attempts)==record.retry_count+1
-        @test first(attempts).tolerance==1e-7
+        @test first(attempts).tolerance==1e-8
         @test last(attempts).termination=="SOLVED"
         @test last(attempts).max_relative_violation<=1e-5
         if record.retry_count>0

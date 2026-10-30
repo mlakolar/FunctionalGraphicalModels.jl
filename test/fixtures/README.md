@@ -15,3 +15,11 @@ unscaled score guard. Fresh standard-tolerance native workspaces reproduce the
 issue. Independent JuMP and stricter native solves provide passing comparisons.
 The test checks full-column feasibility, objectives against JuMP and retry
 receipts, without requiring a particular platform to trigger a numerical failure.
+
+`multiscale-id151-full8.f64` has the same layout for Fourier5, m=8, replicate 1.
+Original 17-slice SHA256: `ad65fb72dd35e87f848bdd3b04a0f9dd036fb53f3e5a2992d7659ed6f215c358`.
+Fixture SHA256: `5deb4dde268da577d60446d5336ba8a86f62f0b2ad75aa6358b569b337609190`.
+At 1e-7, columns 35 and 41 passed the primal guard but underestimated objective
+budgets relative to independent JuMP by more than 1e-4 in normalized units.
+Native 1e-8 resolves this discrepancy while retaining all acceptance checks.
+Both saved fixtures are tested against independent JuMP, with unchanged pilots.
