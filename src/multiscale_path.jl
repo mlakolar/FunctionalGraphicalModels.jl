@@ -120,13 +120,14 @@ function _l2_unscaled_candidate(A,base,bias,j,penalty,bound;tolerance=1e-8)
         JuMP.set_optimizer_attribute(model,name,tolerance)
     end
     JuMP.@variable(model,beta[1:p]);JuMP.@variable(model,z[1:p]>=0)
-    JuMP.@expression(model,t,sum(z))
+    JuMP.@variable(model,t>=0)
+    JuMP.@variable(model,b[1:p,1:H])
     JuMP.@constraint(model,[k=1:p],beta[k]<=z[k])
     JuMP.@constraint(model,[k=1:p],-beta[k]<=z[k])
-    JuMP.@variable(model,b[1:p,1:H])
+    JuMP.@constraint(model,sum(z)<=t)
     if bound!==nothing
-        JuMP.@constraint(model,[bound;beta] in JuMP.SecondOrderCone())
         JuMP.@constraint(model,t<=sqrt(p)*bound)
+        JuMP.@constraint(model,[bound;beta] in JuMP.SecondOrderCone())
     end
     for h in 1:H
         JuMP.@constraint(model,[bias[h]*t;b[:,h]] in JuMP.SecondOrderCone())
@@ -134,7 +135,7 @@ function _l2_unscaled_candidate(A,base,bias,j,penalty,bound;tolerance=1e-8)
             JuMP.@constraint(model,[bias[h]*bound;b[:,h]] in JuMP.SecondOrderCone())
         end
         for k in 1:p
-            r=sum(A[k,l,h]*beta[l] for l in 1:p)-(k==j)-b[k,h]
+            r=JuMP.@expression(model,sum(A[k,l,h]*beta[l] for l in 1:p)-(k==j)-b[k,h] )
             JuMP.@constraint(model,r<=penalty*base[k,h])
             JuMP.@constraint(model,-r<=penalty*base[k,h])
         end
