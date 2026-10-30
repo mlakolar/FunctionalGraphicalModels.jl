@@ -80,16 +80,16 @@ zero iterations and zero setup/solve times. No numerical tolerance is added to
 the certificate. The diagnostic `analytic_zeros` counts these column solves.
 Skipped points preserve lazy matrix updates even in a nonmonotone penalty path. These failure policies must be distinguished in reports.
 
-Before rejecting a SOLVED column on primal residuals, the path can project its
-auxiliary bias witness onto the intersection of its concentric L2 balls
-(radius t, and B_j for spectral calibration). This changes neither beta nor t,
-nor the optimization objective. Every original score-coordinate, raw bias-ball,
-normalized auxiliary-ball and column constraint is then checked again at the
-same 1e-5 guard. A projection that breaks a score or leaves any other violation
-is rejected. Clarabel's gap and feasibility tolerances remain 1e-7.
-`witness_projected` and `raw_max_relative_violation` preserve the diagnostic;
-`witness_repairs` counts accepted projected certificates. This is auxiliary
-certificate repair, not a projection or clipping of the precision columns.
+The native path checks every original constraint in the unscaled variables at
+relative tolerance 1e-5. If a SOLVED candidate fails that guard, the same problem
+is rebuilt cold at stricter Clarabel gap/feasibility tolerances 1e-8, 1e-9, then 1e-10
+if needed. ALMOST_SOLVED is never accepted, even when the primal guard passes. The initial defaults stay 1e-7; acceptance is never relaxed. No bias
+witness, precision column, objective or regularization parameter is projected or
+changed. Certified infeasibility is never retried or converted into an estimate.
+Each column's `attempt_records` preserves all rejected attempts and their
+settings, timings, errors and residuals. `retry_count` counts its retries;
+`guard_retries` counts them across the path. Strict workspaces are discarded
+before the next candidate, which again starts at the standard tolerance.
 
 Use `reuse=false` for independent native solves. The returned workspace-build,
 matrix-update and RHS-update counts establish which reuse occurred. They do

@@ -119,27 +119,50 @@ end
     @test p.results[1][2].column_records[1].termination=="SOLVED"
 end
 
-@testset "Auxiliary witness repair retains every primal guard" begin
+@testset "Unscaled primal guard rejects incompatible candidates" begin
     F=FunctionalGraphicalModels
     A=ones(1,1,1);base=fill(.01,1,1);bias=[.01]
-    beta=[1.];budget=1.;g=fill(1.0001,1,1)
-    raw=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,g)
-    @test raw.relative>1e-5
-    repaired=F._l2_project_witness(g,budget,nothing)
-    @test repaired==ones(1,1)
-    @test g[1]==1.0001 # preserve the solver's candidate
-    checked=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,repaired)
-    @test checked.relative<=1e-5
-    @test beta==[1.] && budget==1.
-    # Repairing a cone cannot excuse an incompatible score or column bound.
-    bad=F._l2_primal_residual(A,zeros(1,1),[1.],1,1.,nothing,beta,budget,repaired)
-    @test bad.relative>1e-5
-    bad_column=F._l2_primal_residual(A,base,bias,1,1.,nothing,[2.],budget,repaired)
-    @test bad_column.relative>1e-5
-    # Spectral witness must respect the smaller of t and B, with both guards kept.
-    projected=F._l2_project_witness(reshape([.7,0.],2,1),.6,.5)
-    @test norm(projected)<=.5
-    spectral=F._l2_primal_residual(reshape([2.5 0.;0. 1.],2,2,1),fill(.005,2,1),
-        [.01],1,1.,.5,[.4,0.],.6,projected)
-    @test spectral.relative<=1e-5
+    beta=[1.];budget=1.;g=ones(1,1)
+    valid=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,g)
+    @test valid.relative<=1e-5
+    # Independently violate auxiliary cone, score and column constraints.
+    cone=F._l2_primal_residual(A,base,bias,1,1.,nothing,beta,budget,fill(1.0001,1,1))
+    @test cone.relative>1e-5
+    score=F._l2_primal_residual(A,zeros(1,1),[1.],1,1.,nothing,beta,budget,g)
+    @test score.relative>1e-5
+    column=F._l2_primal_residual(A,base,bias,1,1.,nothing,[2.],budget,g)
+    @test column.relative>1e-5
+end
+
+@testset "Saved covariance numerical regression with strict retries" begin
+    F=FunctionalGraphicalModels
+    bytes=read(joinpath(@__DIR__,"fixtures","multiscale-id1-full8.f64"))
+    @test length(bytes)==160000
+    A=reshape(reinterpret(Float64,bytes),50,50,8)
+    widths=[.025,.05,.075,.1,.15,.2,.3,.4]
+    ell=(3log(50)+log(8))/200;q=1 ./ (8 .*widths)
+    u=sqrt(ell).*(1 .+q).+ell.*(1 .+q.^2)
+    v=sqrt(ell).*q.+ell.*(1 .+q.^2)
+    problem=(;matrices=A,u,v,bias=.1.*widths.^2,pilot_index=5)
+    native=F.multiscale_l2_aclime_path([problem],[.05];noise_variance=.5,
+        diagonal_floor=200^-2,lp_solver=:clarabel)
+    r=native.results[1][1]
+    @test r.status===:optimal
+    @test all(x->x.max_relative_violation<=1e-5,r.column_records)
+    @test native.diagnostics.guard_retries==sum(x.retry_count for x in r.column_records)
+    for record in r.column_records
+        attempts=record.attempt_records
+        @test length(attempts)==record.retry_count+1
+        @test first(attempts).tolerance==1e-7
+        @test last(attempts).termination=="SOLVED"
+        @test last(attempts).max_relative_violation<=1e-5
+        if record.retry_count>0
+            @test first(attempts).termination=="SOLVED"
+            @test first(attempts).max_relative_violation>1e-5
+            @test all(i->attempts[i].tolerance<attempts[i-1].tolerance,2:length(attempts))
+        end
+    end
+    cold=F.bias_aclime(A;u,v,bias=problem.bias,pilot_index=5,K2=.05,
+        noise_variance=.5,bias_norm=:l2,diagonal_floor=200^-2,lp_solver=:clarabel)
+    @test maximum(abs.(r.budgets-cold.budgets)./(1 .+abs.(cold.budgets)))<=1e-4
 end

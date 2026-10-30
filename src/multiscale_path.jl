@@ -53,10 +53,10 @@ function _l2_problem_data(A, base, bias, j, penalty, bound)
     (;matrix,rhs,cones,objective,score_rows)
 end
 
-function _l2_workspace(data)
+function _l2_workspace(data; tolerance=1e-7)
     n=length(data.objective)
-    settings=Clarabel.Settings(verbose=false,tol_gap_abs=1e-7,tol_gap_rel=1e-7,
-        tol_feas=1e-7,max_threads=1,presolve_enable=false,
+    settings=Clarabel.Settings(verbose=false,tol_gap_abs=tolerance,tol_gap_rel=tolerance,
+        tol_feas=tolerance,max_threads=1,presolve_enable=false,
         input_sparse_dropzeros=false,chordal_decomposition_enable=false)
     solver=Clarabel.Solver(SparseArrays.spzeros(n,n),data.objective,data.matrix,
         data.rhs,data.cones,settings)
@@ -109,16 +109,6 @@ function _l2_primal_residual(A,base,bias,j,penalty,bound,beta,budget,g)
         end
     end
     (;violation,relative)
-end
-
-function _l2_project_witness(g,budget,bound)
-    radius=max(0.,bound===nothing ? budget : min(budget,bound))
-    projected=copy(g)
-    for h in axes(g,2)
-        length_g=norm(g[:,h])
-        length_g>radius && (projected[:,h].*=radius/length_g)
-    end
-    projected
 end
 
 function _l2_pilot(A,d,u,v,bias,pilot_index,K1,noise_variance,lp_solver)
@@ -189,7 +179,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
         end
     end
     workspaces=Any[];previous_shape=nothing;results=Vector{Any}()
-    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;witness_repairs=0
+    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;guard_retries=0
     for spec in specs
         A=Float64.(spec.matrices);p,_,H=size(A);pilot_index=get(spec,:pilot_index,1)
         d=calibration===:pilot ? max.(diag(A[:,:,pilot_index]),diagonal_floor) : Float64.(spec.d)
@@ -200,7 +190,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             message="pilot: "*sprint(showerror,exception)
             push!(results,[(;penalty=k,columns=fill(NaN,p,p),budgets=fill(NaN,p),pilot=fill(NaN,p),
                 column_records=[(;column=j,status=:failure,termination="PILOT_FAILURE",iterations=0,
-                    setup_seconds=0.,solve_seconds=0.,max_violation=NaN,max_relative_violation=NaN,witness_projected=false,raw_max_relative_violation=NaN,error=message) for j in 1:p],
+                    setup_seconds=0.,solve_seconds=0.,max_violation=NaN,max_relative_violation=NaN,retry_count=0,attempt_records=NamedTuple[],error=message) for j in 1:p],
                 status=:failure) for k in ks])
             workspaces=Any[];previous_shape=nothing
             continue
@@ -222,48 +212,61 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                 if all(penalty*base[j,h]>=1. for h in 1:H)
                     columns[index][:,j].=0.;budgets[index][j]=0.;analytic_zeros+=1
                     push!(records[index],(;column=j,status=:optimal,termination="ANALYTIC_ZERO",iterations=0,
-                        setup_seconds=0.,solve_seconds=0.,max_violation=0.,max_relative_violation=0.,witness_projected=false,raw_max_relative_violation=0.,error=""))
+                        setup_seconds=0.,solve_seconds=0.,max_violation=0.,max_relative_violation=0.,retry_count=0,attempt_records=NamedTuple[],error=""))
                     continue
                 end
-                started=time_ns();setup_seconds=0.;solve_seconds=0.;status="NOT_RUN";iterations=0
-                witness_projected=false;raw_relative=NaN
-                try
-                    if !reuse || workspaces[j]===nothing
-                        data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
-                        workspaces[j]=_l2_workspace(data);builds+=1
-                    elseif !data_current
-                        data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
-                        _l2_update!(workspaces[j],data);matrix_updates+=1
-                    else
-                        _l2_penalty!(workspaces[j],base,j,penalty);rhs_updates+=1
-                    end
-                    data_current=true
-                    setup_seconds=(time_ns()-started)/1e9;tick=time_ns()
-                    solution=Clarabel.solve!(workspaces[j].solver)
-                    solve_seconds=(time_ns()-tick)/1e9;status=string(solution.status);iterations=solution.iterations
-                    status=="SOLVED" || error("Clarabel status $status")
-                    beta=copy(solution.x[1:p]);budget=solution.x[2p+1]
-                    g=reshape(solution.x[2p+2:end],p,H)
-                    raw=_l2_primal_residual(A,base,spec.bias,j,penalty,bound,beta,budget,g)
-                    check=raw;raw_relative=raw.relative
-                    if isfinite(raw.relative) && raw.relative>1e-5
-                        # Radial projection repairs only the auxiliary witness, never beta/t.
-                        # Acceptance still requires EVERY original guard at the same tolerance.
-                        g=_l2_project_witness(g,budget,bound)
+                setup_seconds=0.;solve_seconds=0.;attempt_records=NamedTuple[]
+                # A SOLVED termination is insufficient: the unscaled guard decides.
+                # Rebuild at stricter tolerances only after a solved candidate fails it.
+                # Never retry/convert certified infeasibility, and never enlarge the guard.
+                for (attempt,tolerance) in enumerate((1e-7,1e-8,1e-9,1e-10))
+                    started=time_ns();status="NOT_RUN";iterations=0;violation=relative=NaN
+                    guard_failed=false;setup_this=solve_this=0.
+                    try
+                        if attempt>1 || !reuse || workspaces[j]===nothing
+                            data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
+                            workspaces[j]=_l2_workspace(data;tolerance);builds+=1
+                        elseif !data_current
+                            data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
+                            _l2_update!(workspaces[j],data);matrix_updates+=1
+                        else
+                            _l2_penalty!(workspaces[j],base,j,penalty);rhs_updates+=1
+                        end
+                        data_current=true
+                        setup_this=(time_ns()-started)/1e9;setup_seconds+=setup_this;tick=time_ns()
+                        solution=Clarabel.solve!(workspaces[j].solver)
+                        solve_this=(time_ns()-tick)/1e9;solve_seconds+=solve_this
+                        status=string(solution.status);iterations=solution.iterations
+                        status=="SOLVED" || error("Clarabel status $status")
+                        beta=copy(solution.x[1:p]);budget=solution.x[2p+1]
+                        g=reshape(solution.x[2p+2:end],p,H)
                         check=_l2_primal_residual(A,base,spec.bias,j,penalty,bound,beta,budget,g)
-                        witness_projected=true
+                        violation=check.violation;relative=check.relative
+                        guard_failed=!(all(isfinite,beta)&&isfinite(budget)&&isfinite(relative)&&relative<=1e-5)
+                        guard_failed && error("primal residual check failed: $relative")
+                        push!(attempt_records,(;termination=status,iterations,tolerance,setup_seconds=setup_this,
+                            solve_seconds=solve_this,max_violation=violation,max_relative_violation=relative,error=""))
+                        columns[index][:,j].=beta;budgets[index][j]=budget
+                        push!(records[index],(;column=j,status=:optimal,termination=status,
+                            iterations=sum(r.iterations for r in attempt_records),setup_seconds,solve_seconds,
+                            max_violation=violation,max_relative_violation=relative,retry_count=attempt-1,attempt_records,error=""))
+                        # A stricter retry must not silently change the next candidate's defaults.
+                        attempt>1 && (workspaces[j]=nothing)
+                        break
+                    catch exception
+                        message=sprint(showerror,exception)
+                        push!(attempt_records,(;termination=status,iterations,tolerance,setup_seconds=setup_this,
+                            solve_seconds=solve_this,max_violation=violation,max_relative_violation=relative,error=message))
+                        workspaces[j]=nothing
+                        if (guard_failed || (attempt>1 && status=="ALMOST_SOLVED")) && attempt<4
+                            guard_retries+=1
+                            continue
+                        end
+                        push!(records[index],(;column=j,status=:failure,termination=status,
+                            iterations=sum(r.iterations for r in attempt_records),setup_seconds,solve_seconds,
+                            max_violation=violation,max_relative_violation=relative,retry_count=attempt-1,attempt_records,error=message))
+                        break
                     end
-                    violation=check.violation;relative=check.relative
-                    all(isfinite,beta)&&isfinite(budget)&&isfinite(relative)&&relative<=1e-5 || error("primal residual check failed: $relative")
-                    columns[index][:,j].=beta;budgets[index][j]=budget
-                    witness_repairs+=witness_projected
-                    push!(records[index],(;column=j,status=:optimal,termination=status,iterations,
-                        setup_seconds,solve_seconds,max_violation=violation,max_relative_violation=relative,
-                        witness_projected,raw_max_relative_violation=raw_relative,error=""))
-                catch exception
-                    push!(records[index],(;column=j,status=:failure,termination=status,iterations,
-                        setup_seconds,solve_seconds,max_violation=NaN,max_relative_violation=NaN,witness_projected,raw_max_relative_violation=raw_relative,error=sprint(showerror,exception)))
-                    workspaces[j]=nothing # rebuild after failure; do not contaminate the next member
                 end
             end
         end
@@ -271,7 +274,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             column_records=records[i],status=all(r->r.status===:optimal,records[i]) ? :optimal : :failure) for i in eachindex(ks)])
     end
     (;results,diagnostics=(;workspace_builds=builds,matrix_updates,rhs_updates,
-        reuse,iterate_warm_start=false,calibration,analytic_zeros,witness_repairs))
+        reuse,iterate_warm_start=false,calibration,analytic_zeros,guard_retries))
 end
 
 """
