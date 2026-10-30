@@ -91,9 +91,20 @@ column program using the original bias vectors b rather than normalized g.
 It holds the pilot and every bound/penalty fixed, uses 1e-8, and retries at stricter
 1e-9/1e-10 only if needed. This is an equivalent formulation, not covariance or
 precision projection. Native SOLVED or JuMP OPTIMAL plus every original guard
-is required; ALMOST_SOLVED is never accepted. Certified infeasibility is never
+is required; ALMOST_SOLVED and approximate infeasibility are never accepted. Native
+ALMOST_PRIMAL_INFEASIBLE and MOI ALMOST_INFEASIBLE use the same numerical
+recovery path; they are not infeasibility certificates. Certified infeasibility is never
 retried or converted into an estimate. Zero bias uses the exact zero auxiliary
 witness, which must still pass the original score guard.
+
+After uncertain spectral infeasibility persists through the same-tolerance
+optimization recovery, the path can run an objective-free native probe using
+exactly the original constraint matrix, right-hand side and cones at 1e-8.
+Only precise PRIMAL_INFEASIBLE certifies the original program's infeasibility.
+A SOLVED feasibility probe is not a minimizer of the original objective and is
+never accepted as a precision estimate; stricter optimization recovery continues.
+`infeasibility_probes` counts these certificate-only solves. All attempts remain
+at the same or stricter tolerance, and the statistical program is unchanged.
 
 `attempt_records` preserves rejected candidates, all statuses, backends, accuracy
 settings, residuals, errors and clocks. The column's `backend` identifies the

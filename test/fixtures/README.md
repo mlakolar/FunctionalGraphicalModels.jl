@@ -23,3 +23,10 @@ At 1e-7, columns 35 and 41 passed the primal guard but underestimated objective
 budgets relative to independent JuMP by more than 1e-4 in normalized units.
 Native 1e-8 resolves this discrepancy while retaining all acceptance checks.
 Both saved fixtures are tested against independent JuMP, with unchanged pilots.
+
+`multiscale-id241-full8.f64` has the same layout for Fourier5, m=60, replicate 1.
+Original 17-slice SHA256: `82dcf9cd41fad3bd61866f4221ecc7995b2eeac581412c65a524344ef6ec8efb`.
+Fixture SHA256: `f786bba6be3c164477e4dfe95e2c1f7dd7ca42a8e1a9019f4e80b008a775dd65`.
+The spectral full-set b=1, score=.006 program exposed an approximate primal
+infeasibility status at column18. Such a status cannot be accepted as a precise
+certificate and must reach checked recovery. The grid and tolerances are fixed.

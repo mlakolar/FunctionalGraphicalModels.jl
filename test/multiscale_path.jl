@@ -193,3 +193,49 @@ end
     @test maximum(abs.(path.results[1][2].budgets-cold.budgets)./(1 .+abs.(cold.budgets)))<=1e-4
     @test path.diagnostics.recovery_attempts==sum(c.retry_count for r in path.results[1] for c in r.column_records)
 end
+
+@testset "Uncertain infeasibility recovers without accepting a certificate" begin
+    F=FunctionalGraphicalModels
+    # Observed in the revised-grid canary: these tags must reach a fresh solver,
+    # while precise infeasibility must remain an explicit failed column.
+    for status in ("ALMOST_PRIMAL_INFEASIBLE","ALMOST_INFEASIBLE","ALMOST_DUAL_INFEASIBLE")
+        @test F._l2_recoverable(status)
+    end
+    @test !F._l2_recoverable("PRIMAL_INFEASIBLE")
+    @test !F._l2_recoverable("DUAL_INFEASIBLE")
+    @test !F._l2_recoverable("SOLVED")
+    @test F._l2_recoverable("SOLVED",true)
+end
+
+@testset "Saved spectral feasibility-boundary regression" begin
+    F=FunctionalGraphicalModels
+    A=reshape(reinterpret(Float64,read(joinpath(@__DIR__,"fixtures","multiscale-id241-full8.f64"))),50,50,8)
+    h=[.025,.05,.075,.1,.15,.2,.3,.4];n=200;m=60;p=50
+    jstar=ceil(Int,log2(n*m))+3
+    ell=(3log(p)+(log(Float64(p)*n)+log(jstar)))/n;q=1 ./ (m .*h)
+    u=sqrt(ell).*(1 .+q).+ell.*(1 .+q.^2)
+    v=sqrt(ell).*q.+ell.*(1 .+q.^2)
+    spec=(;matrices=A,u,v,bias=h.^2,d=max.(diag(A[:,:,5]),n^-2),kappa_bound=8.)
+    path=F.multiscale_l2_aclime_path([spec],[.003,.006];calibration=:spectral,noise_variance=.5)
+    for result in path.results[1],record in result.column_records
+        @test record.termination in ("SOLVED","OPTIMAL","ANALYTIC_ZERO","PRIMAL_INFEASIBLE")
+        if record.status===:optimal
+            @test record.max_relative_violation<=1e-5
+        else
+            @test record.termination=="PRIMAL_INFEASIBLE"
+            @test all(isnan,result.columns[:,record.column])
+        end
+    end
+    @test any(c->c.termination=="PRIMAL_INFEASIBLE",path.results[1][2].column_records)
+end
+
+@testset "Objective-free probes only certify infeasibility" begin
+    F=FunctionalGraphicalModels
+    feasible=F._l2_infeasibility_probe(ones(1,1,1),fill(.1,1,1),[.01],1,1.,2.)
+    @test feasible.raw_status=="SOLVED"
+    @test feasible.termination=="INFEASIBILITY_PROBE_SOLVED"
+    @test !feasible.precision_estimate
+    infeasible=F._l2_infeasibility_probe(zeros(1,1,1),zeros(1,1),[0.],1,1.,1.)
+    @test infeasible.termination=="PRIMAL_INFEASIBLE"
+    @test !infeasible.precision_estimate
+end

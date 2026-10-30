@@ -53,6 +53,16 @@ function _l2_problem_data(A, base, bias, j, penalty, bound)
     (;matrix,rhs,cones,objective,score_rows)
 end
 
+# Approximate infeasibility is a numerical outcome, not a certificate. Route it
+# through recovery; only precise termination plus the original checks may pass.
+function _l2_recoverable(status,guard_failed=false)
+    status in ("PRIMAL_INFEASIBLE","DUAL_INFEASIBLE") && return false
+    guard_failed || status in ("ALMOST_SOLVED","ALMOST_PRIMAL_INFEASIBLE",
+        "ALMOST_DUAL_INFEASIBLE","ALMOST_INFEASIBLE","INFEASIBLE_OR_UNBOUNDED",
+        "NUMERICAL_ERROR","INSUFFICIENT_PROGRESS","MAX_ITERATIONS",
+        "ALMOST_OPTIMAL","SLOW_PROGRESS","ITERATION_LIMIT","OTHER_ERROR")
+end
+
 function _l2_workspace(data; tolerance=1e-8)
     n=length(data.objective)
     settings=Clarabel.Settings(verbose=false,tol_gap_abs=tolerance,tol_gap_rel=tolerance,
@@ -167,6 +177,24 @@ function _l2_unscaled_candidate(A,base,bias,j,penalty,bound;tolerance=1e-8)
         setup_seconds,solve_seconds)
 end
 
+# A precise infeasibility certificate concerns only A*x+s=b, s in K, so
+# removing the objective cannot change its validity for the original problem.
+# A feasible probe is deliberately NOT returned as an optimized column.
+function _l2_infeasibility_probe(A,base,bias,j,penalty,bound;tolerance=1e-8)
+    p,_,H=size(A);started=time_ns()
+    original=_l2_problem_data(A,base,bias,j,penalty,bound)
+    data=(;original...,objective=zeros(length(original.objective)))
+    workspace=_l2_workspace(data;tolerance)
+    setup_seconds=(time_ns()-started)/1e9;tick=time_ns()
+    solution=Clarabel.solve!(workspace.solver)
+    solve_seconds=(time_ns()-tick)/1e9;raw_status=string(solution.status)
+    termination=raw_status=="PRIMAL_INFEASIBLE" ? raw_status : "INFEASIBILITY_PROBE_"*raw_status
+    (;beta=copy(solution.x[1:p]),budget=solution.x[2p+1],
+        g=copy(reshape(solution.x[2p+2:end],p,H)),termination,raw_status,
+        iterations=Int(solution.iterations),iterations_available=true,setup_seconds,solve_seconds,
+        precision_estimate=false)
+end
+
 function _l2_pilot(A,d,u,v,bias,pilot_index,K1,noise_variance,lp_solver)
     p=size(A,1);theta=zeros(p)
     for j in 1:p
@@ -236,7 +264,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
         end
     end
     workspaces=Any[];previous_shape=nothing;results=Vector{Any}()
-    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;recovery_attempts=0;cold_restarts=0;unscaled_solves=0
+    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0;recovery_attempts=0;cold_restarts=0;unscaled_solves=0;infeasibility_probes=0
     for spec in specs
         A=Float64.(spec.matrices);p,_,H=size(A);pilot_index=get(spec,:pilot_index,1)
         d=calibration===:pilot ? max.(diag(A[:,:,pilot_index]),diagonal_floor) : Float64.(spec.d)
@@ -274,9 +302,11 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                 end
                 setup_seconds=0.;solve_seconds=0.;attempt_records=NamedTuple[]
                 initially_reused=reuse && workspaces[j]!==nothing
-                steps=initially_reused ?
-                    [(:native,1e-8),(:native,1e-8),(:jump_unscaled,1e-8),(:jump_unscaled,1e-9),(:jump_unscaled,1e-10)] :
-                    [(:native,1e-8),(:jump_unscaled,1e-8),(:jump_unscaled,1e-9),(:jump_unscaled,1e-10)]
+                steps=[(:native,1e-8)]
+                initially_reused && push!(steps,(:native,1e-8))
+                push!(steps,(:jump_unscaled,1e-8))
+                bound!==nothing && push!(steps,(:native_certificate,1e-8))
+                append!(steps,[(:jump_unscaled,1e-9),(:jump_unscaled,1e-10)])
                 for (attempt,(backend,tolerance)) in enumerate(steps)
                     attempt>1 && (recovery_attempts+=1)
                     started=time_ns();status="NOT_RUN";raw_status=status;iterations=0;iterations_available=true
@@ -302,8 +332,13 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                             beta=copy(solution.x[1:p]);budget=solution.x[2p+1]
                             g=copy(reshape(solution.x[2p+2:end],p,H))
                         else
-                            unscaled_solves+=1
-                            cold=_l2_unscaled_candidate(A,base,spec.bias,j,penalty,bound;tolerance)
+                            if backend===:native_certificate
+                                infeasibility_probes+=1
+                                cold=_l2_infeasibility_probe(A,base,spec.bias,j,penalty,bound;tolerance)
+                            else
+                                unscaled_solves+=1
+                                cold=_l2_unscaled_candidate(A,base,spec.bias,j,penalty,bound;tolerance)
+                            end
                             setup_this=cold.setup_seconds;solve_this=cold.solve_seconds
                             setup_seconds+=setup_this;solve_seconds+=solve_this
                             status=cold.termination;raw_status=cold.raw_status
@@ -331,8 +366,8 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
                             setup_seconds=setup_this,solve_seconds=solve_this,max_violation=violation,
                             max_relative_violation=relative,rejected_candidate=status=="PRIMAL_INFEASIBLE" ? nothing : candidate,error=message))
                         workspaces[j]=nothing
-                        recoverable=guard_failed || status in ("ALMOST_SOLVED","NUMERICAL_ERROR","INSUFFICIENT_PROGRESS",
-                            "MAX_ITERATIONS","ALMOST_OPTIMAL","SLOW_PROGRESS","ITERATION_LIMIT","OTHER_ERROR")
+                        recoverable=_l2_recoverable(status,guard_failed) ||
+                            (backend===:native_certificate && status!="PRIMAL_INFEASIBLE")
                         if recoverable && attempt<length(steps)
                             continue
                         end
@@ -349,7 +384,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             column_records=records[i],status=all(r->r.status===:optimal,records[i]) ? :optimal : :failure) for i in eachindex(ks)])
     end
     (;results,diagnostics=(;workspace_builds=builds,matrix_updates,rhs_updates,
-        reuse,iterate_warm_start=false,calibration,analytic_zeros,recovery_attempts,cold_restarts,unscaled_solves))
+        reuse,iterate_warm_start=false,calibration,analytic_zeros,recovery_attempts,cold_restarts,unscaled_solves,infeasibility_probes))
 end
 
 """
