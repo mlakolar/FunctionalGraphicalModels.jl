@@ -84,3 +84,37 @@ end
     end
     @test_throws ArgumentError F.fit_multiscale_l2_path(C,penalties;bandwidth_sets=[[1]],pilot_indices=[2],bias_constants=constants)
 end
+
+@testset "Analytic zero and lazy covariance updates" begin
+    F=FunctionalGraphicalModels
+    # With theta=2*kappa/d=4 and u=.5, zero is feasible exactly at penalty .5.
+    a=(matrices=reshape([1. .1;.1 1.],2,2,1),d=ones(2),u=[.5],v=[0.],bias=[.01],kappa_bound=2.)
+    b=(;a...,matrices=reshape([2. .3;.3 1.5],2,2,1))
+    ks=[.5,.1,1.,.2] # skip before, between and after actual solves
+    path=F.multiscale_l2_aclime_path([a,b],ks;calibration=:spectral)
+    cold=F.multiscale_l2_aclime_path([a,b],ks;calibration=:spectral,reuse=false)
+    @test path.diagnostics.analytic_zeros==8
+    @test path.diagnostics.workspace_builds==2
+    @test path.diagnostics.matrix_updates==2
+    for i in 1:2,k in eachindex(ks)
+        r=path.results[i][k]
+        @test r.status===:optimal
+        @test r.budgets≈cold.results[i][k].budgets atol=1e-5
+        if k in (1,3)
+            @test iszero(r.columns) && iszero(r.budgets)
+            @test all(x->x.termination=="ANALYTIC_ZERO" && x.iterations==0,r.column_records)
+        else
+            @test all(x->x.termination=="SOLVED",r.column_records)
+            @test all(>(0.),r.budgets)
+        end
+    end
+    # Strict certificate: a sub-boundary allowance is solved, never rounded up.
+    below=F.multiscale_l2_aclime_path([a],[prevfloat(.5)];calibration=:spectral)
+    @test below.diagnostics.analytic_zeros==0
+    # The same certificate applies with the data-based pilot calibration.
+    pilot=(matrices=ones(1,1,1),u=[.1],v=[0.],bias=[.01])
+    p=F.multiscale_l2_aclime_path([pilot],[100.,.1];lp_solver=:clarabel)
+    @test p.results[1][1].column_records[1].termination=="ANALYTIC_ZERO"
+    @test iszero(p.results[1][1].columns)
+    @test p.results[1][2].column_records[1].termination=="SOLVED"
+end

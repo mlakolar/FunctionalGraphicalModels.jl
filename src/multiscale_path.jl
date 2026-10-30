@@ -117,7 +117,10 @@ No iterate warm start is claimed. Inputs may be indefinite. No tuning,
 clipping, thresholding, symmetrization or precision norm cap occurs here.
 `results[a][b]` corresponds to problem a and penalty b. Numerical failures
 remain NaN and have explicit column records; certified infeasibility is
-reported as failure rather than substituted by zero. Use `interval_symmetrize`
+reported as failure rather than substituted by zero. If the score allowances
+contain the unit vector at every width, the exact optimum is returned as zero
+without building or solving a conic program (`termination="ANALYTIC_ZERO"`).
+Use `interval_symmetrize`
 on successful columns when constructing the final precision estimator.
 """
 function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot,
@@ -146,7 +149,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
         end
     end
     workspaces=Any[];previous_shape=nothing;results=Vector{Any}()
-    builds=0;matrix_updates=0;rhs_updates=0
+    builds=0;matrix_updates=0;rhs_updates=0;analytic_zeros=0
     for spec in specs
         A=Float64.(spec.matrices);p,_,H=size(A);pilot_index=get(spec,:pilot_index,1)
         d=calibration===:pilot ? max.(diag(A[:,:,pilot_index]),diagonal_floor) : Float64.(spec.d)
@@ -172,18 +175,28 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
         records=[NamedTuple[] for _ in ks]
         for j in 1:p
             base=bases[j];bound=calibration===:spectral ? theta[j] : nothing
+            data_current=false # skipped analytic points must not hide a new covariance problem
             for (index,penalty) in enumerate(ks)
+                # beta=g=t=0 is feasible iff every diagonal score allowance is >=1.
+                # Since t>=norm(beta,1)>=0, this is a global optimum, not a fallback.
+                if all(penalty*base[j,h]>=1. for h in 1:H)
+                    columns[index][:,j].=0.;budgets[index][j]=0.;analytic_zeros+=1
+                    push!(records[index],(;column=j,status=:optimal,termination="ANALYTIC_ZERO",iterations=0,
+                        setup_seconds=0.,solve_seconds=0.,max_violation=0.,max_relative_violation=0.,error=""))
+                    continue
+                end
                 started=time_ns();setup_seconds=0.;solve_seconds=0.;status="NOT_RUN";iterations=0
                 try
                     if !reuse || workspaces[j]===nothing
                         data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
                         workspaces[j]=_l2_workspace(data);builds+=1
-                    elseif index==1
+                    elseif !data_current
                         data=_l2_problem_data(A,base,spec.bias,j,penalty,bound)
                         _l2_update!(workspaces[j],data);matrix_updates+=1
                     else
                         _l2_penalty!(workspaces[j],base,j,penalty);rhs_updates+=1
                     end
+                    data_current=true
                     setup_seconds=(time_ns()-started)/1e9;tick=time_ns()
                     solution=Clarabel.solve!(workspaces[j].solver)
                     solve_seconds=(time_ns()-tick)/1e9;status=string(solution.status);iterations=solution.iterations
@@ -228,7 +241,7 @@ function multiscale_l2_aclime_path(problems,penalties;calibration::Symbol=:pilot
             column_records=records[i],status=all(r->r.status===:optimal,records[i]) ? :optimal : :failure) for i in eachindex(ks)])
     end
     (;results,diagnostics=(;workspace_builds=builds,matrix_updates,rhs_updates,
-        reuse,iterate_warm_start=false,calibration))
+        reuse,iterate_warm_start=false,calibration,analytic_zeros))
 end
 
 """
