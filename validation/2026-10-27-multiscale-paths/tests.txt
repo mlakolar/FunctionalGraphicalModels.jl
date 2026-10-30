@@ -1,0 +1,4 @@
+Test Summary:                            | Pass  Total  Time
+Native multiscale L2 workspace sequences |  119    119  6.1s
+Test Summary:                                  | Pass  Total  Time
+Explicit multiscale bandwidth and penalty grid |   20     20  1.2s

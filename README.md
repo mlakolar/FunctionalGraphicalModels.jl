@@ -143,3 +143,6 @@ The [final comparison and all reporting inputs](docs/IMPLEMENTATION_COMPARISON_2
 preserve adverse findings, finite indefinite losses and PD-selection missingness.
 The spectral fixed calibration returns zero in this study; empirical tuning does
 not establish an accuracy advantage. Conditional theory is stated separately.
+
+Native multiscale ℓ₂-ACLIME penalty and bandwidth-sequence tools are described in
+[Multiscale paths](docs/MULTISCALE_PATHS.md).
